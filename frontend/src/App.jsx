@@ -9,7 +9,19 @@ import Dashboard from './pages/Dashboard'
 import Courses from './pages/Courses'
 import Admin from './pages/Admin'
 import QuizPage from './pages/QuizPage'
+import TypingPage from './pages/TypingPage'
 import './App.css'
+
+const defaultTypingStats = () => ({
+  history: [],
+  weakKeyCounts: {},
+  incorrectPatterns: {},
+  handStats: {
+    left: { total: 0, errors: 0 },
+    right: { total: 0, errors: 0 },
+    other: { total: 0, errors: 0 },
+  },
+})
 
 function App() {
   const navigate = useNavigate()
@@ -22,10 +34,12 @@ function App() {
   const [adminQuizzes, setAdminQuizzes] = useState([])
   const [userQuizzes, setUserQuizzes] = useState([])
   const [quizSessionState, setQuizSessionState] = useState(null)
+  const [typingSessionState, setTypingSessionState] = useState(null)
+  const [typingStatsByUsername, setTypingStatsByUsername] = useState({})
   const [uploadedResources, setUploadedResources] = useState([])
   const resourcesRef = useRef(uploadedResources)
 
-  const navLinks = ['Home', 'Courses', 'Quiz', 'Dashboard']
+  const navLinks = ['Home', 'Courses', 'Quiz', 'Typing', 'Dashboard']
 
   const sanitizePreferences = (preferences, nextCategories = categories) => {
     const validCategories = new Set(nextCategories.map((item) => item.name))
@@ -136,6 +150,16 @@ function App() {
       return
     }
 
+    if (link === 'Typing') {
+      if (!currentUser) {
+        openAuth('login')
+        return
+      }
+
+      navigate('/typing')
+      return
+    }
+
     if (!currentUser) {
       openAuth('login')
       return
@@ -207,6 +231,64 @@ function App() {
 
   const handleDeleteUserQuiz = (quizId) => {
     setUserQuizzes((prev) => prev.filter((item) => item.id !== quizId))
+  }
+
+  const handleSaveTypingResult = (result) => {
+    if (!currentUser) {
+      return
+    }
+
+    setTypingStatsByUsername((prev) => {
+      const current = prev[currentUser.username] ?? defaultTypingStats()
+
+      const nextWeakKeyCounts = { ...current.weakKeyCounts }
+      Object.entries(result.weakKeyCounts ?? {}).forEach(([key, count]) => {
+        nextWeakKeyCounts[key] = (nextWeakKeyCounts[key] ?? 0) + count
+      })
+
+      const nextIncorrectPatterns = { ...current.incorrectPatterns }
+      Object.entries(result.incorrectPatterns ?? {}).forEach(([pattern, count]) => {
+        nextIncorrectPatterns[pattern] = (nextIncorrectPatterns[pattern] ?? 0) + count
+      })
+
+      const nextHandStats = {
+        left: {
+          total: current.handStats.left.total + (result.handStats?.left?.total ?? 0),
+          errors: current.handStats.left.errors + (result.handStats?.left?.errors ?? 0),
+        },
+        right: {
+          total: current.handStats.right.total + (result.handStats?.right?.total ?? 0),
+          errors: current.handStats.right.errors + (result.handStats?.right?.errors ?? 0),
+        },
+        other: {
+          total: current.handStats.other.total + (result.handStats?.other?.total ?? 0),
+          errors: current.handStats.other.errors + (result.handStats?.other?.errors ?? 0),
+        },
+      }
+
+      const nextHistory = [
+        ...current.history,
+        {
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+          durationSeconds: result.durationSeconds,
+          wpm: result.wpm,
+          accuracy: result.accuracy,
+          errorCount: result.errorCount,
+          totalKeystrokes: result.totalKeystrokes,
+        },
+      ]
+
+      return {
+        ...prev,
+        [currentUser.username]: {
+          history: nextHistory,
+          weakKeyCounts: nextWeakKeyCounts,
+          incorrectPatterns: nextIncorrectPatterns,
+          handStats: nextHandStats,
+        },
+      }
+    })
   }
 
   const handleAddCategory = (name) => {
@@ -465,6 +547,29 @@ function App() {
                 onDeleteUserQuiz={handleDeleteUserQuiz}
                 onUpdateQuizSession={setQuizSessionState}
               />
+            }
+          />
+          <Route
+            path="/typing"
+            element={
+              <ProtectedRoute
+                isAllowed={Boolean(currentUser)}
+                onUnauthorized={() => openAuth('login')}
+                redirectPath="/"
+              >
+                <TypingPage
+                  user={currentUser}
+                  typingSessionState={typingSessionState}
+                  typingStats={
+                    currentUser
+                      ? typingStatsByUsername[currentUser.username] ?? defaultTypingStats()
+                      : defaultTypingStats()
+                  }
+                  onRequireAuth={() => openAuth('login')}
+                  onUpdateTypingSession={setTypingSessionState}
+                  onSaveTypingResult={handleSaveTypingResult}
+                />
+              </ProtectedRoute>
             }
           />
           <Route

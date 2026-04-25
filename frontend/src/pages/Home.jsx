@@ -1,9 +1,42 @@
-import Hero from '../components/Hero'
-import SectionHeader from '../components/SectionHeader'
-import InfoCard from '../components/InfoCard'
+import { Link } from 'react-router-dom'
+import HeroSection from '../components/home/HeroSection'
+import InfoSection from '../components/home/InfoSection'
+import FeatureCard from '../components/home/FeatureCard'
+import ScrollToTopButton from '../components/ScrollToTopButton'
 import Footer from '../components/Footer'
 
 function Home() {
+  const moduleItems = [
+    {
+      icon: 'LS',
+      title: 'Learning System',
+      description:
+        'Structured PDFs, course resources, and admin-managed materials organized by categories and subcategories.',
+      tone: 'blue',
+    },
+    {
+      icon: 'QZ',
+      title: 'Quiz System',
+      description:
+        'Practice admin-created quizzes and build your own quizzes with category-focused attempts.',
+      tone: 'cyan',
+    },
+    {
+      icon: 'TP',
+      title: 'Typing System',
+      description:
+        'Use Practice and Test modes with WPM, accuracy, weak-letter analysis, and hand-balance insights.',
+      tone: 'mint',
+    },
+    {
+      icon: 'PT',
+      title: 'Performance System',
+      description:
+        'Track dashboard analytics with personalized recommendations based on preferences and learning behavior.',
+      tone: 'indigo',
+    },
+  ]
+
   const featureItems = [
     {
       icon: 'LM',
@@ -15,54 +48,82 @@ function Home() {
       icon: 'AQ',
       title: 'Adaptive Quizzes',
       description:
-        'Practice with quizzes that adjust difficulty based on your progress and understanding.',
+        'Practice with admin and user-driven quizzes using category filtering and result reviews.',
     },
     {
       icon: 'TP',
       title: 'Typing Practice',
       description:
-        'Improve speed and accuracy in both English and Nepali through targeted drills.',
+        'Improve speed and accuracy with live highlighting, test timers, and analytics-backed insights.',
     },
     {
-      icon: 'PT',
+      icon: 'DG',
       title: 'Performance Tracking',
       description:
-        'Visualize strengths, weak areas, and milestones with clear performance insights.',
+        'Visualize strengths, weak areas, and progress through dashboards and recommendation modules.',
     },
   ]
 
-  const sampleResources = [
+  const stepItems = [
+    'User signs up and logs in to access personalized tools.',
+    'User selects preferences from admin-managed learning categories.',
+    'User studies via courses, quizzes, and typing practice sessions.',
+    'System tracks performance and adapts recommendations over time.',
+  ]
+
+  const benefitItems = [
     {
-      icon: 'CS',
-      title: 'Computer Science Fundamentals',
-      description: 'Core concepts, notes, and interactive checkpoints for foundational topics.',
+      title: 'Personalized Learning',
+      description:
+        'Preferences and dashboard signals tailor recommendations to each learner profile.',
     },
     {
-      icon: 'MA',
-      title: 'Applied Mathematics',
-      description: 'Stepwise lessons with solved examples and quick revision worksheets.',
+      title: 'Adaptive Quizzes',
+      description:
+        'Practice using admin question banks and custom user quiz creation in one unified workflow.',
     },
     {
-      icon: 'EN',
-      title: 'Academic English Lab',
-      description: 'Reading, grammar, and writing exercises tailored to your skill level.',
+      title: 'Skill Tracking',
+      description:
+        'Typing metrics, quiz outcomes, and behavior insights help identify weak points quickly.',
+    },
+    {
+      title: 'Centralized Platform',
+      description:
+        'Courses, quizzes, typing, preferences, and analytics all operate in a single system.',
     },
   ]
 
   return (
-    <>
-      <Hero />
+    <div className="home-page">
+      <HeroSection />
 
-      <section className="section features" aria-labelledby="features-heading">
-        <SectionHeader
-          id="features-heading"
-          title="Powerful Learning Features"
-          subtitle="Everything you need for focused, personalized, and measurable learning."
-        />
+      <InfoSection
+        id="platform-overview"
+        title="Everything You Need to Learn Smarter"
+        subtitle="LearnSys combines course delivery, quizzes, typing intelligence, and analytics into one integrated product flow."
+      >
+        <div className="home-grid home-grid-modules">
+          {moduleItems.map((item) => (
+            <FeatureCard
+              key={item.title}
+              icon={item.icon}
+              title={item.title}
+              description={item.description}
+              tone={item.tone}
+            />
+          ))}
+        </div>
+      </InfoSection>
 
-        <div className="card-grid feature-grid">
+      <InfoSection
+        id="feature-stack"
+        title="Core Features That Drive Progress"
+        subtitle="Every module is engineered for practical learning outcomes and measurable improvements."
+      >
+        <div className="home-grid home-grid-features">
           {featureItems.map((item) => (
-            <InfoCard
+            <FeatureCard
               key={item.title}
               icon={item.icon}
               title={item.title}
@@ -70,30 +131,60 @@ function Home() {
             />
           ))}
         </div>
-      </section>
+      </InfoSection>
 
-      <section className="section resources" aria-labelledby="resources-heading">
-        <SectionHeader
-          id="resources-heading"
-          title="Explore Sample Resources"
-          subtitle="Preview how courses and resources are presented in LearnSys."
-        />
-
-        <div className="card-grid resource-grid">
-          {sampleResources.map((item) => (
-            <InfoCard
-              key={item.title}
-              icon={item.icon}
-              title={item.title}
-              description={item.description}
-              variant="compact"
-            />
+      <InfoSection
+        id="how-it-works"
+        title="How It Works"
+        subtitle="A clear learning flow from onboarding to continuous improvement."
+      >
+        <div className="home-steps">
+          {stepItems.map((step, index) => (
+            <article key={step} className="home-step-card">
+              <p className="home-step-index">Step {index + 1}</p>
+              <p>{step}</p>
+            </article>
           ))}
+        </div>
+      </InfoSection>
+
+      <InfoSection
+        id="why-learnsys"
+        title="Why LearnSys"
+        subtitle="Designed for learners who need personalization, performance visibility, and practical tools in one product."
+      >
+        <div className="home-grid home-grid-benefits">
+          {benefitItems.map((item) => (
+            <article key={item.title} className="home-benefit-card">
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+            </article>
+          ))}
+        </div>
+      </InfoSection>
+
+      <section className="home-cta home-section" aria-labelledby="home-cta-heading">
+        <div className="home-cta-card">
+          <h2 id="home-cta-heading">Start Your Learning Journey Today</h2>
+          <p>
+            Build better study habits with personalized content, structured practice,
+            and measurable progress tracking across every module.
+          </p>
+
+          <div className="home-cta-actions">
+            <Link to="/courses" className="btn btn-primary btn-large">
+              Get Started
+            </Link>
+            <Link to="/dashboard" className="btn btn-light btn-large">
+              View Dashboard
+            </Link>
+          </div>
         </div>
       </section>
 
       <Footer />
-    </>
+      <ScrollToTopButton />
+    </div>
   )
 }
 

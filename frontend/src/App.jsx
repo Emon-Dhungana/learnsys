@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import AuthModal from './components/AuthModal'
+import AdminAuthModal from './components/AdminAuthModal'
 import PreferencesModal from './components/PreferencesModal'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
@@ -24,24 +25,30 @@ const defaultTypingStats = () => ({
 })
 
 function App() {
+  const ADMIN_USERNAME = 'admin'
+  const ADMIN_PASSWORD = 'admin123'
+
   const navigate = useNavigate()
-  const [categories, setCategories] = useState([])
+  const [courseCategories, setCourseCategories] = useState([])
+  const [quizCategories, setQuizCategories] = useState([])
   const [currentUser, setCurrentUser] = useState(null)
   const [userPreferencesByUsername, setUserPreferencesByUsername] = useState({})
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false)
   const [authView, setAuthView] = useState('login')
+  const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false)
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
+  const [adminAuthError, setAdminAuthError] = useState('')
   const [adminQuizzes, setAdminQuizzes] = useState([])
   const [userQuizzes, setUserQuizzes] = useState([])
   const [quizSessionState, setQuizSessionState] = useState(null)
   const [typingSessionState, setTypingSessionState] = useState(null)
   const [typingStatsByUsername, setTypingStatsByUsername] = useState({})
   const [uploadedResources, setUploadedResources] = useState([])
-  const resourcesRef = useRef(uploadedResources)
 
   const navLinks = ['Home', 'Courses', 'Quiz', 'Typing', 'Dashboard']
 
-  const sanitizePreferences = (preferences, nextCategories = categories) => {
+  const sanitizePreferences = (preferences, nextCategories = courseCategories) => {
     const validCategories = new Set(nextCategories.map((item) => item.name))
     const validSubcategories = new Set(
       nextCategories.flatMap((item) => item.subcategories ?? []),
@@ -63,18 +70,6 @@ function App() {
     return nextMap
   }
 
-  useEffect(() => {
-    resourcesRef.current = uploadedResources
-  }, [uploadedResources])
-
-  useEffect(() => {
-    return () => {
-      resourcesRef.current.forEach((resource) => {
-        URL.revokeObjectURL(resource.fileUrl)
-      })
-    }
-  }, [])
-
   const openAuth = (view) => {
     setAuthView(view)
     setIsAuthOpen(true)
@@ -95,10 +90,6 @@ function App() {
       username,
       preferences: existingPreferences,
     })
-
-    if (!userPreferencesByUsername[username]) {
-      setIsPreferencesOpen(true)
-    }
 
     setIsAuthOpen(false)
   }
@@ -125,7 +116,42 @@ function App() {
 
   const handleLogout = () => {
     setCurrentUser(null)
+    setIsAdminAuthenticated(false)
     setIsPreferencesOpen(false)
+    navigate('/')
+  }
+
+  const openAdminAuth = () => {
+    setAdminAuthError('')
+    setIsAdminAuthOpen(true)
+  }
+
+  const closeAdminAuth = () => {
+    setIsAdminAuthOpen(false)
+    setAdminAuthError('')
+  }
+
+  const handleAdminAuth = ({ username, password }) => {
+    const normalizedUsername = username.trim()
+
+    if (!normalizedUsername || !password) {
+      setAdminAuthError('Please enter admin username and password.')
+      return
+    }
+
+    if (normalizedUsername !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
+      setAdminAuthError('Invalid admin credentials.')
+      return
+    }
+
+    setIsAdminAuthenticated(true)
+    setAdminAuthError('')
+    setIsAdminAuthOpen(false)
+    navigate('/admin')
+  }
+
+  const handleAdminLogout = () => {
+    setIsAdminAuthenticated(false)
     navigate('/')
   }
 
@@ -168,16 +194,26 @@ function App() {
     navigate('/dashboard')
   }
 
-  const handleUploadResource = ({ title, description, category, subcategory, file }) => {
+  const handleUploadResource = ({
+    title,
+    description,
+    category,
+    subcategory,
+    fileUrl,
+    publicId,
+    resourceType,
+    fileName,
+  }) => {
     const newResource = {
       id: crypto.randomUUID(),
       title,
       description,
       category,
       subcategory,
-      fileName: file.name,
-      fileType: file.type || 'Unknown file type',
-      fileUrl: URL.createObjectURL(file),
+      fileName,
+      fileType: resourceType || 'raw',
+      publicId,
+      fileUrl,
     }
 
     setUploadedResources((prev) => [newResource, ...prev])
@@ -190,6 +226,7 @@ function App() {
       options: questionInput.options,
       correctAnswer: questionInput.correctAnswer,
       category: questionInput.category,
+      subcategory: questionInput.subcategory,
     }
 
     setAdminQuizzes((prev) => [newQuestion, ...prev])
@@ -291,28 +328,28 @@ function App() {
     })
   }
 
-  const handleAddCategory = (name) => {
+  const handleAddCourseCategory = (name) => {
     const nextCategory = {
       id: crypto.randomUUID(),
       name,
       subcategories: [],
     }
 
-    setCategories((prev) => [...prev, nextCategory])
+    setCourseCategories((prev) => [...prev, nextCategory])
   }
 
-  const handleRenameCategory = (categoryId, nextName) => {
-    const currentCategory = categories.find((item) => item.id === categoryId)
+  const handleRenameCourseCategory = (categoryId, nextName) => {
+    const currentCategory = courseCategories.find((item) => item.id === categoryId)
     if (!currentCategory) {
       return
     }
 
     const previousName = currentCategory.name
-    const nextCategories = categories.map((item) =>
+    const nextCategories = courseCategories.map((item) =>
       item.id === categoryId ? { ...item, name: nextName } : item,
     )
 
-    setCategories(nextCategories)
+    setCourseCategories(nextCategories)
 
     setUploadedResources((prev) =>
       prev.map((resource) =>
@@ -363,15 +400,15 @@ function App() {
     })
   }
 
-  const handleDeleteCategory = (categoryId) => {
-    const currentCategory = categories.find((item) => item.id === categoryId)
+  const handleDeleteCourseCategory = (categoryId) => {
+    const currentCategory = courseCategories.find((item) => item.id === categoryId)
     if (!currentCategory) {
       return
     }
 
-    const nextCategories = categories.filter((item) => item.id !== categoryId)
+    const nextCategories = courseCategories.filter((item) => item.id !== categoryId)
 
-    setCategories(nextCategories)
+    setCourseCategories(nextCategories)
 
     setUploadedResources((prev) =>
       prev.map((resource) =>
@@ -395,8 +432,8 @@ function App() {
     })
   }
 
-  const handleAddSubcategory = (categoryId, subcategoryName) => {
-    const nextCategories = categories.map((item) =>
+  const handleAddCourseSubcategory = (categoryId, subcategoryName) => {
+    const nextCategories = courseCategories.map((item) =>
       item.id === categoryId
         ? {
             ...item,
@@ -405,16 +442,16 @@ function App() {
         : item,
     )
 
-    setCategories(nextCategories)
+    setCourseCategories(nextCategories)
   }
 
-  const handleDeleteSubcategory = (categoryId, subcategoryName) => {
-    const category = categories.find((item) => item.id === categoryId)
+  const handleDeleteCourseSubcategory = (categoryId, subcategoryName) => {
+    const category = courseCategories.find((item) => item.id === categoryId)
     if (!category) {
       return
     }
 
-    const nextCategories = categories.map((item) =>
+    const nextCategories = courseCategories.map((item) =>
       item.id === categoryId
         ? {
             ...item,
@@ -423,7 +460,7 @@ function App() {
         : item,
     )
 
-    setCategories(nextCategories)
+    setCourseCategories(nextCategories)
 
     setUploadedResources((prev) =>
       prev.map((resource) =>
@@ -447,15 +484,96 @@ function App() {
     })
   }
 
-  const handleDeleteResource = (resourceId) => {
-    setUploadedResources((prev) => {
-      const target = prev.find((item) => item.id === resourceId)
-      if (target) {
-        URL.revokeObjectURL(target.fileUrl)
-      }
+  const handleAddQuizCategory = (name) => {
+    const nextCategory = {
+      id: crypto.randomUUID(),
+      name,
+      subcategories: [],
+    }
 
-      return prev.filter((item) => item.id !== resourceId)
-    })
+    setQuizCategories((prev) => [...prev, nextCategory])
+  }
+
+  const handleRenameQuizCategory = (categoryId, nextName) => {
+    const currentCategory = quizCategories.find((item) => item.id === categoryId)
+    if (!currentCategory) {
+      return
+    }
+
+    const previousName = currentCategory.name
+    const nextCategories = quizCategories.map((item) =>
+      item.id === categoryId ? { ...item, name: nextName } : item,
+    )
+
+    setQuizCategories(nextCategories)
+
+    setAdminQuizzes((prev) =>
+      prev.map((question) =>
+        question.category === previousName ? { ...question, category: nextName } : question,
+      ),
+    )
+  }
+
+  const handleDeleteQuizCategory = (categoryId) => {
+    const currentCategory = quizCategories.find((item) => item.id === categoryId)
+    if (!currentCategory) {
+      return
+    }
+
+    const nextCategories = quizCategories.filter((item) => item.id !== categoryId)
+
+    setQuizCategories(nextCategories)
+
+    setAdminQuizzes((prev) =>
+      prev.map((question) =>
+        question.category === currentCategory.name
+          ? { ...question, category: 'Uncategorized', subcategory: 'General' }
+          : question,
+      ),
+    )
+  }
+
+  const handleAddQuizSubcategory = (categoryId, subcategoryName) => {
+    const nextCategories = quizCategories.map((item) =>
+      item.id === categoryId
+        ? {
+            ...item,
+            subcategories: [...item.subcategories, subcategoryName],
+          }
+        : item,
+    )
+
+    setQuizCategories(nextCategories)
+  }
+
+  const handleDeleteQuizSubcategory = (categoryId, subcategoryName) => {
+    const category = quizCategories.find((item) => item.id === categoryId)
+    if (!category) {
+      return
+    }
+
+    const nextCategories = quizCategories.map((item) =>
+      item.id === categoryId
+        ? {
+            ...item,
+            subcategories: item.subcategories.filter((subcat) => subcat !== subcategoryName),
+          }
+        : item,
+    )
+
+    setQuizCategories(nextCategories)
+
+    setAdminQuizzes((prev) =>
+      prev.map((question) =>
+        question.category === category.name && question.subcategory === subcategoryName
+          ? { ...question, subcategory: 'General' }
+          : question,
+      ),
+    )
+  }
+
+  const handleDeleteResource = (resourceId) => {
+    setUploadedResources((prev) => prev.filter((item) => item.id !== resourceId))
   }
 
   const handleSavePreferences = (preferences) => {
@@ -503,13 +621,13 @@ function App() {
 
       <main>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Home onOpenAdminAuth={openAdminAuth} />} />
           <Route
             path="/courses"
             element={
               <Courses
                 resources={uploadedResources}
-                categories={categories}
+                courseCategories={courseCategories}
                 userPreferences={currentUser?.preferences}
               />
             }
@@ -517,20 +635,29 @@ function App() {
           <Route
             path="/admin"
             element={
-              <Admin
-                categories={categories}
-                adminQuizzes={adminQuizzes}
-                resources={uploadedResources}
-                onAddCategory={handleAddCategory}
-                onRenameCategory={handleRenameCategory}
-                onDeleteCategory={handleDeleteCategory}
-                onAddSubcategory={handleAddSubcategory}
-                onDeleteSubcategory={handleDeleteSubcategory}
-                onAddAdminQuestion={handleAddAdminQuestion}
-                onDeleteAdminQuestion={handleDeleteAdminQuestion}
-                onUploadResource={handleUploadResource}
-                onDeleteResource={handleDeleteResource}
-              />
+              <ProtectedRoute isAllowed={isAdminAuthenticated} redirectPath="/">
+                <Admin
+                  courseCategories={courseCategories}
+                  quizCategories={quizCategories}
+                  adminQuizzes={adminQuizzes}
+                  resources={uploadedResources}
+                  onAddCourseCategory={handleAddCourseCategory}
+                  onRenameCourseCategory={handleRenameCourseCategory}
+                  onDeleteCourseCategory={handleDeleteCourseCategory}
+                  onAddCourseSubcategory={handleAddCourseSubcategory}
+                  onDeleteCourseSubcategory={handleDeleteCourseSubcategory}
+                  onAddQuizCategory={handleAddQuizCategory}
+                  onRenameQuizCategory={handleRenameQuizCategory}
+                  onDeleteQuizCategory={handleDeleteQuizCategory}
+                  onAddQuizSubcategory={handleAddQuizSubcategory}
+                  onDeleteQuizSubcategory={handleDeleteQuizSubcategory}
+                  onAddAdminQuestion={handleAddAdminQuestion}
+                  onDeleteAdminQuestion={handleDeleteAdminQuestion}
+                  onUploadResource={handleUploadResource}
+                  onDeleteResource={handleDeleteResource}
+                  onAdminLogout={handleAdminLogout}
+                />
+              </ProtectedRoute>
             }
           />
           <Route
@@ -538,7 +665,7 @@ function App() {
             element={
               <QuizPage
                 user={currentUser}
-                categories={categories}
+                quizCategories={quizCategories}
                 adminQuizzes={adminQuizzes}
                 userQuizzes={userQuizzes}
                 quizSessionState={quizSessionState}
@@ -600,11 +727,18 @@ function App() {
         onSignup={handleSignup}
       />
 
+      <AdminAuthModal
+        isOpen={isAdminAuthOpen}
+        error={adminAuthError}
+        onClose={closeAdminAuth}
+        onSubmit={handleAdminAuth}
+      />
+
       <PreferencesModal
         key={`${currentUser?.username ?? 'guest'}-${isPreferencesOpen ? 'open' : 'closed'}`}
         isOpen={isPreferencesOpen}
         user={currentUser}
-        categories={categories}
+        courseCategories={courseCategories}
         onClose={() => setIsPreferencesOpen(false)}
         onSave={handleSavePreferences}
       />

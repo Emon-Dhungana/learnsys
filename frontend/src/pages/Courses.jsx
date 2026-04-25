@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 
-function Courses({ resources, categories, userPreferences }) {
+function Courses({ resources, courseCategories, userPreferences }) {
   const [showAll, setShowAll] = useState(false)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('all')
 
-  const categoryNames = categories.map((item) => item.name)
+  const categoryNames = courseCategories.map((item) => item.name)
 
   const categoryFilteredResources = useMemo(() => {
     if (activeCategoryFilter === 'all') {

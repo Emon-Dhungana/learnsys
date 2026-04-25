@@ -10,11 +10,11 @@ function Dashboard({ user, resources, onEditPreferences }) {
       return resources.slice(0, 4)
     }
 
-    const categories = user.preferences.categories ?? []
+    const preferredCourseCategories = user.preferences.categories ?? []
     const subcategories = user.preferences.subcategories ?? []
 
     return resources.filter((resource) => {
-      const categoryMatch = categories.includes(resource.category)
+      const categoryMatch = preferredCourseCategories.includes(resource.category)
       const subcategoryMatch = subcategories.includes(resource.subcategory)
       return categoryMatch || subcategoryMatch
     })

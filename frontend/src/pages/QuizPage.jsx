@@ -27,7 +27,7 @@ const shuffle = (items) => {
 
 function QuizPage({
   user,
-  categories,
+  quizCategories,
   adminQuizzes,
   userQuizzes,
   quizSessionState,
@@ -281,7 +281,7 @@ function QuizPage({
   }
 
   const tabList = [TAB_EXPLORE, TAB_CREATE, TAB_MY]
-  const quizCategories = categories.map((item) => item.name)
+  const quizCategoryNames = quizCategories.map((item) => item.name)
 
   return (
     <section className="quiz-page" aria-labelledby="quiz-heading">
@@ -417,7 +417,7 @@ function QuizPage({
               onChange={(event) => setAdminCategorySelection(event.target.value)}
             >
               <option value="mixed">Mixed Categories</option>
-              {quizCategories.map((name) => (
+              {quizCategoryNames.map((name) => (
                 <option key={name} value={name}>
                   {name}
                 </option>

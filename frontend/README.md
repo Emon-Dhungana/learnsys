@@ -14,3 +14,25 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Firebase Firestore Setup
+
+1. Copy `.env.example` to `.env`.
+2. Fill in your Firebase project values.
+3. Firestore is initialized in `src/firebase.js` and exported as `db`.
+
+```js
+import { db } from './firebase'
+```
+
+Example Firestore usage:
+
+```js
+import { addDoc, collection, getDocs } from 'firebase/firestore'
+import { db } from './firebase'
+
+await addDoc(collection(db, 'items'), { name: 'Example item' })
+
+const snapshot = await getDocs(collection(db, 'items'))
+const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+```

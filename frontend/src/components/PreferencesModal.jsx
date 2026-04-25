@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 
-function PreferencesModal({ isOpen, user, categories, onClose, onSave }) {
+function PreferencesModal({ isOpen, user, courseCategories, onClose, onSave }) {
   const [selectedCategories, setSelectedCategories] = useState(
     user?.preferences?.categories ?? [],
   )
@@ -11,7 +11,7 @@ function PreferencesModal({ isOpen, user, categories, onClose, onSave }) {
   const categoriesMap = useMemo(() => {
     const nextMap = {}
 
-    categories.forEach((categoryItem) => {
+    courseCategories.forEach((categoryItem) => {
       const categoryName = categoryItem.name?.trim()
       if (!categoryName) {
         return
@@ -29,7 +29,7 @@ function PreferencesModal({ isOpen, user, categories, onClose, onSave }) {
     })
 
     return nextMap
-  }, [categories])
+  }, [courseCategories])
 
   const categoryNames = useMemo(() => {
     return Object.keys(categoriesMap).sort((a, b) => a.localeCompare(b))

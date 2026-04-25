@@ -1,6 +1,4 @@
-import { Link } from 'react-router-dom'
-
-function Footer() {
+function Footer({ onOpenAdminAuth }) {
   return (
     <footer className="footer" aria-label="Footer">
       <div className="footer-col about">
@@ -36,9 +34,9 @@ function Footer() {
       </div>
 
       <div className="footer-admin-access" aria-label="Admin access">
-        <Link className="footer-admin-link" to="/admin">
+        <button type="button" className="footer-admin-link" onClick={onOpenAdminAuth}>
           Admin Login
-        </Link>
+        </button>
       </div>
     </footer>
   )

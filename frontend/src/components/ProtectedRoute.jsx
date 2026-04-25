@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 
 function ProtectedRoute({ isAllowed, onUnauthorized, redirectPath = '/', children }) {
   useEffect(() => {
-    if (!isAllowed) {
+    if (!isAllowed && onUnauthorized) {
       onUnauthorized()
     }
   }, [isAllowed, onUnauthorized])

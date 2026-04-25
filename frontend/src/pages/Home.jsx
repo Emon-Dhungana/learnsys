@@ -5,7 +5,7 @@ import FeatureCard from '../components/home/FeatureCard'
 import ScrollToTopButton from '../components/ScrollToTopButton'
 import Footer from '../components/Footer'
 
-function Home() {
+function Home({ onOpenAdminAuth }) {
   const moduleItems = [
     {
       icon: 'LS',
@@ -182,7 +182,7 @@ function Home() {
         </div>
       </section>
 
-      <Footer />
+      <Footer onOpenAdminAuth={onOpenAdminAuth} />
       <ScrollToTopButton />
     </div>
   )

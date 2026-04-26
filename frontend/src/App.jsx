@@ -73,6 +73,7 @@ function App() {
   const [authView, setAuthView] = useState('login')
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isSessionRestored, setIsSessionRestored] = useState(false)
   const [adminAuthError, setAdminAuthError] = useState('')
   const [adminQuizzes, setAdminQuizzes] = useState([])
   const [adminQuizLoading, setAdminQuizLoading] = useState(false)
@@ -108,6 +109,7 @@ function App() {
       }
 
       console.log('isAdmin after restore:', storedAdmin === 'true')
+      setIsSessionRestored(true)
     }, 0)
 
     return () => window.clearTimeout(timeoutId)
@@ -799,31 +801,33 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute isAllowed={isAdmin} redirectPath="/">
-                <Admin
-                  courseCategories={courseCategories}
-                  quizCategories={quizCategories}
-                  adminQuizzes={adminQuizzes}
-                  adminQuizLoading={adminQuizLoading}
-                  adminQuizError={adminQuizError}
-                  resources={uploadedResources}
-                  onAddCourseCategory={handleAddCourseCategory}
-                  onRenameCourseCategory={handleRenameCourseCategory}
-                  onDeleteCourseCategory={handleDeleteCourseCategory}
-                  onAddCourseSubcategory={handleAddCourseSubcategory}
-                  onDeleteCourseSubcategory={handleDeleteCourseSubcategory}
-                  onAddQuizCategory={handleAddQuizCategory}
-                  onRenameQuizCategory={handleRenameQuizCategory}
-                  onDeleteQuizCategory={handleDeleteQuizCategory}
-                  onAddQuizSubcategory={handleAddQuizSubcategory}
-                  onDeleteQuizSubcategory={handleDeleteQuizSubcategory}
-                  onAddAdminQuestion={handleAddAdminQuestion}
-                  onDeleteAdminQuestion={handleDeleteAdminQuestion}
-                  onUploadResource={handleUploadResource}
-                  onDeleteResource={handleDeleteResource}
-                  onAdminLogout={handleAdminLogout}
-                />
-              </ProtectedRoute>
+              isSessionRestored ? (
+                <ProtectedRoute isAllowed={isAdmin} redirectPath="/">
+                  <Admin
+                    courseCategories={courseCategories}
+                    quizCategories={quizCategories}
+                    adminQuizzes={adminQuizzes}
+                    adminQuizLoading={adminQuizLoading}
+                    adminQuizError={adminQuizError}
+                    resources={uploadedResources}
+                    onAddCourseCategory={handleAddCourseCategory}
+                    onRenameCourseCategory={handleRenameCourseCategory}
+                    onDeleteCourseCategory={handleDeleteCourseCategory}
+                    onAddCourseSubcategory={handleAddCourseSubcategory}
+                    onDeleteCourseSubcategory={handleDeleteCourseSubcategory}
+                    onAddQuizCategory={handleAddQuizCategory}
+                    onRenameQuizCategory={handleRenameQuizCategory}
+                    onDeleteQuizCategory={handleDeleteQuizCategory}
+                    onAddQuizSubcategory={handleAddQuizSubcategory}
+                    onDeleteQuizSubcategory={handleDeleteQuizSubcategory}
+                    onAddAdminQuestion={handleAddAdminQuestion}
+                    onDeleteAdminQuestion={handleDeleteAdminQuestion}
+                    onUploadResource={handleUploadResource}
+                    onDeleteResource={handleDeleteResource}
+                    onAdminLogout={handleAdminLogout}
+                  />
+                </ProtectedRoute>
+              ) : null
             }
           />
           <Route

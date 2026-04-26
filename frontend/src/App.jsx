@@ -1,5 +1,16 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  serverTimestamp,
+  where,
+  writeBatch,
+} from 'firebase/firestore'
 import Navbar from './components/Navbar'
 import AuthModal from './components/AuthModal'
 import AdminAuthModal from './components/AdminAuthModal'
@@ -11,6 +22,7 @@ import Courses from './pages/Courses'
 import Admin from './pages/Admin'
 import QuizPage from './pages/QuizPage'
 import TypingPage from './pages/TypingPage'
+import { db } from './firebase'
 import './App.css'
 
 const defaultTypingStats = () => ({
@@ -27,19 +39,52 @@ const defaultTypingStats = () => ({
 function App() {
   const ADMIN_USERNAME = 'admin'
   const ADMIN_PASSWORD = 'admin123'
+  const userStorageKey = 'learnsys_user'
+  const adminStorageKey = 'learnsys_admin'
+
+  const readStoredUser = () => {
+    try {
+      const storedUser = localStorage.getItem(userStorageKey)
+      return storedUser ? JSON.parse(storedUser) : null
+    } catch {
+      return null
+    }
+  }
+
+  const readStoredAdminSession = () => {
+    try {
+      return localStorage.getItem(adminStorageKey) === 'true'
+    } catch {
+      return false
+    }
+  }
 
   const navigate = useNavigate()
   const [courseCategories, setCourseCategories] = useState([])
   const [quizCategories, setQuizCategories] = useState([])
-  const [currentUser, setCurrentUser] = useState(null)
-  const [userPreferencesByUsername, setUserPreferencesByUsername] = useState({})
+  const [currentUser, setCurrentUser] = useState(() => readStoredUser())
+  const [userPreferencesByUsername, setUserPreferencesByUsername] = useState(() => {
+    const storedUser = readStoredUser()
+    if (!storedUser?.username) {
+      return {}
+    }
+
+    return {
+      [storedUser.username]: storedUser.preferences ?? {
+        categories: [],
+        subcategories: [],
+      },
+    }
+  })
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false)
   const [authView, setAuthView] = useState('login')
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false)
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => readStoredAdminSession())
   const [adminAuthError, setAdminAuthError] = useState('')
   const [adminQuizzes, setAdminQuizzes] = useState([])
+  const [adminQuizLoading, setAdminQuizLoading] = useState(false)
+  const [adminQuizError, setAdminQuizError] = useState('')
   const [userQuizzes, setUserQuizzes] = useState([])
   const [quizSessionState, setQuizSessionState] = useState(null)
   const [typingSessionState, setTypingSessionState] = useState(null)
@@ -91,6 +136,14 @@ function App() {
       preferences: existingPreferences,
     })
 
+    localStorage.setItem(
+      userStorageKey,
+      JSON.stringify({
+        username,
+        preferences: existingPreferences,
+      }),
+    )
+
     setIsAuthOpen(false)
   }
 
@@ -106,6 +159,7 @@ function App() {
     }
 
     setCurrentUser(nextUser)
+    localStorage.setItem(userStorageKey, JSON.stringify(nextUser))
     setUserPreferencesByUsername((prev) => ({
       ...prev,
       [username]: nextUser.preferences,
@@ -118,6 +172,8 @@ function App() {
     setCurrentUser(null)
     setIsAdminAuthenticated(false)
     setIsPreferencesOpen(false)
+    localStorage.removeItem(userStorageKey)
+    localStorage.removeItem(adminStorageKey)
     navigate('/')
   }
 
@@ -131,7 +187,7 @@ function App() {
     setAdminAuthError('')
   }
 
-  const handleAdminAuth = ({ username, password }) => {
+  const handleAdminAuth = async ({ username, password }) => {
     const normalizedUsername = username.trim()
 
     if (!normalizedUsername || !password) {
@@ -147,11 +203,14 @@ function App() {
     setIsAdminAuthenticated(true)
     setAdminAuthError('')
     setIsAdminAuthOpen(false)
+    localStorage.setItem(adminStorageKey, 'true')
+    await loadAdminQuizzes()
     navigate('/admin')
   }
 
   const handleAdminLogout = () => {
     setIsAdminAuthenticated(false)
+    localStorage.removeItem(adminStorageKey)
     navigate('/')
   }
 
@@ -219,21 +278,68 @@ function App() {
     setUploadedResources((prev) => [newResource, ...prev])
   }
 
-  const handleAddAdminQuestion = (questionInput) => {
-    const newQuestion = {
-      id: crypto.randomUUID(),
-      question: questionInput.question,
-      options: questionInput.options,
-      correctAnswer: questionInput.correctAnswer,
-      category: questionInput.category,
-      subcategory: questionInput.subcategory,
-    }
+  const loadAdminQuizzes = useCallback(async () => {
+    setAdminQuizLoading(true)
+    setAdminQuizError('')
 
-    setAdminQuizzes((prev) => [newQuestion, ...prev])
+    try {
+      const snapshot = await getDocs(collection(db, 'quizzes'))
+      const firestoreQuizzes = snapshot.docs
+        .map((quizDoc) => {
+          const data = quizDoc.data()
+          return {
+            id: quizDoc.id,
+            question: data.question ?? '',
+            options: data.options ?? { A: '', B: '', C: '', D: '' },
+            correctAnswer: data.correctAnswer ?? 'A',
+            category: data.category ?? 'Uncategorized',
+            subcategory: data.subcategory ?? 'General',
+            createdAt: data.createdAt ?? null,
+          }
+        })
+        .sort((a, b) => {
+          const aValue = a.createdAt?.seconds ?? 0
+          const bValue = b.createdAt?.seconds ?? 0
+          return bValue - aValue
+        })
+
+      setAdminQuizzes(firestoreQuizzes)
+    } catch (error) {
+      setAdminQuizError(error?.message || 'Failed to fetch quizzes from Firestore.')
+    } finally {
+      setAdminQuizLoading(false)
+    }
+  }, [])
+
+  const handleAddAdminQuestion = async (questionInput) => {
+    setAdminQuizError('')
+
+    try {
+      await addDoc(collection(db, 'quizzes'), {
+        question: questionInput.question,
+        options: questionInput.options,
+        correctAnswer: questionInput.correctAnswer,
+        category: questionInput.category,
+        subcategory: questionInput.subcategory,
+        createdAt: serverTimestamp(),
+      })
+
+      await loadAdminQuizzes()
+    } catch (error) {
+      setAdminQuizError(error?.message || 'Failed to save quiz to Firestore.')
+      throw error
+    }
   }
 
-  const handleDeleteAdminQuestion = (questionId) => {
-    setAdminQuizzes((prev) => prev.filter((item) => item.id !== questionId))
+  const handleDeleteAdminQuestion = async (questionId) => {
+    setAdminQuizError('')
+
+    try {
+      await deleteDoc(doc(db, 'quizzes', questionId))
+      await loadAdminQuizzes()
+    } catch (error) {
+      setAdminQuizError(error?.message || 'Failed to delete quiz from Firestore.')
+    }
   }
 
   const handleSaveUserQuiz = (quizInput) => {
@@ -494,7 +600,7 @@ function App() {
     setQuizCategories((prev) => [...prev, nextCategory])
   }
 
-  const handleRenameQuizCategory = (categoryId, nextName) => {
+  const handleRenameQuizCategory = async (categoryId, nextName) => {
     const currentCategory = quizCategories.find((item) => item.id === categoryId)
     if (!currentCategory) {
       return
@@ -507,14 +613,24 @@ function App() {
 
     setQuizCategories(nextCategories)
 
-    setAdminQuizzes((prev) =>
-      prev.map((question) =>
-        question.category === previousName ? { ...question, category: nextName } : question,
-      ),
-    )
+    try {
+      const snapshot = await getDocs(
+        query(collection(db, 'quizzes'), where('category', '==', previousName)),
+      )
+      const batch = writeBatch(db)
+
+      snapshot.docs.forEach((quizDoc) => {
+        batch.update(quizDoc.ref, { category: nextName })
+      })
+
+      await batch.commit()
+      await loadAdminQuizzes()
+    } catch (error) {
+      setAdminQuizError(error?.message || 'Failed to update quiz category in Firestore.')
+    }
   }
 
-  const handleDeleteQuizCategory = (categoryId) => {
+  const handleDeleteQuizCategory = async (categoryId) => {
     const currentCategory = quizCategories.find((item) => item.id === categoryId)
     if (!currentCategory) {
       return
@@ -524,13 +640,21 @@ function App() {
 
     setQuizCategories(nextCategories)
 
-    setAdminQuizzes((prev) =>
-      prev.map((question) =>
-        question.category === currentCategory.name
-          ? { ...question, category: 'Uncategorized', subcategory: 'General' }
-          : question,
-      ),
-    )
+    try {
+      const snapshot = await getDocs(
+        query(collection(db, 'quizzes'), where('category', '==', currentCategory.name)),
+      )
+      const batch = writeBatch(db)
+
+      snapshot.docs.forEach((quizDoc) => {
+        batch.update(quizDoc.ref, { category: 'Uncategorized', subcategory: 'General' })
+      })
+
+      await batch.commit()
+      await loadAdminQuizzes()
+    } catch (error) {
+      setAdminQuizError(error?.message || 'Failed to reset quiz category in Firestore.')
+    }
   }
 
   const handleAddQuizSubcategory = (categoryId, subcategoryName) => {
@@ -546,7 +670,7 @@ function App() {
     setQuizCategories(nextCategories)
   }
 
-  const handleDeleteQuizSubcategory = (categoryId, subcategoryName) => {
+  const handleDeleteQuizSubcategory = async (categoryId, subcategoryName) => {
     const category = quizCategories.find((item) => item.id === categoryId)
     if (!category) {
       return
@@ -563,13 +687,25 @@ function App() {
 
     setQuizCategories(nextCategories)
 
-    setAdminQuizzes((prev) =>
-      prev.map((question) =>
-        question.category === category.name && question.subcategory === subcategoryName
-          ? { ...question, subcategory: 'General' }
-          : question,
-      ),
-    )
+    try {
+      const snapshot = await getDocs(
+        query(
+          collection(db, 'quizzes'),
+          where('category', '==', category.name),
+          where('subcategory', '==', subcategoryName),
+        ),
+      )
+      const batch = writeBatch(db)
+
+      snapshot.docs.forEach((quizDoc) => {
+        batch.update(quizDoc.ref, { subcategory: 'General' })
+      })
+
+      await batch.commit()
+      await loadAdminQuizzes()
+    } catch (error) {
+      setAdminQuizError(error?.message || 'Failed to reset quiz subcategory in Firestore.')
+    }
   }
 
   const handleDeleteResource = (resourceId) => {
@@ -593,6 +729,14 @@ function App() {
         preferences: normalizedPreferences,
       }
     })
+
+    localStorage.setItem(
+      userStorageKey,
+      JSON.stringify({
+        ...currentUser,
+        preferences: normalizedPreferences,
+      }),
+    )
 
     setUserPreferencesByUsername((prev) => ({
       ...prev,
@@ -640,6 +784,8 @@ function App() {
                   courseCategories={courseCategories}
                   quizCategories={quizCategories}
                   adminQuizzes={adminQuizzes}
+                  adminQuizLoading={adminQuizLoading}
+                  adminQuizError={adminQuizError}
                   resources={uploadedResources}
                   onAddCourseCategory={handleAddCourseCategory}
                   onRenameCourseCategory={handleRenameCourseCategory}
@@ -667,8 +813,11 @@ function App() {
                 user={currentUser}
                 quizCategories={quizCategories}
                 adminQuizzes={adminQuizzes}
+                  adminQuizLoading={adminQuizLoading}
+                  adminQuizError={adminQuizError}
                 userQuizzes={userQuizzes}
                 quizSessionState={quizSessionState}
+                  onLoadAdminQuizzes={loadAdminQuizzes}
                 onRequireAuth={() => openAuth('login')}
                 onSaveUserQuiz={handleSaveUserQuiz}
                 onDeleteUserQuiz={handleDeleteUserQuiz}

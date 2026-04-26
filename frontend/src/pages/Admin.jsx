@@ -145,6 +145,8 @@ function Admin({
   courseCategories,
   quizCategories,
   adminQuizzes,
+  adminQuizLoading,
+  adminQuizError,
   resources,
   onAddCourseCategory,
   onRenameCourseCategory,
@@ -454,7 +456,7 @@ function Admin({
     setQuestionError('')
   }
 
-  const handleAdminQuestionSubmit = (event) => {
+  const handleAdminQuestionSubmit = async (event) => {
     event.preventDefault()
 
     if (!quizCategories.length) {
@@ -478,32 +480,36 @@ function Admin({
       return
     }
 
-    onAddAdminQuestion({
-      question: questionData.question.trim(),
-      options: {
-        A: questionData.options.A.trim(),
-        B: questionData.options.B.trim(),
-        C: questionData.options.C.trim(),
-        D: questionData.options.D.trim(),
-      },
-      correctAnswer: questionData.correctAnswer,
-      category: selectedQuestionCategory.name,
-      subcategory: questionData.subcategory.trim(),
-    })
+    try {
+      await onAddAdminQuestion({
+        question: questionData.question.trim(),
+        options: {
+          A: questionData.options.A.trim(),
+          B: questionData.options.B.trim(),
+          C: questionData.options.C.trim(),
+          D: questionData.options.D.trim(),
+        },
+        correctAnswer: questionData.correctAnswer,
+        category: selectedQuestionCategory.name,
+        subcategory: questionData.subcategory.trim(),
+      })
 
-    setQuestionData({
-      question: '',
-      categoryId: '',
-      subcategory: '',
-      options: {
-        A: '',
-        B: '',
-        C: '',
-        D: '',
-      },
-      correctAnswer: 'A',
-    })
-    setQuestionError('')
+      setQuestionData({
+        question: '',
+        categoryId: '',
+        subcategory: '',
+        options: {
+          A: '',
+          B: '',
+          C: '',
+          D: '',
+        },
+        correctAnswer: 'A',
+      })
+      setQuestionError('')
+    } catch {
+      setQuestionError('Failed to save quiz question. Please try again.')
+    }
   }
 
   const handleUploadSubmit = async (event) => {
@@ -869,8 +875,14 @@ function Admin({
                     </select>
 
                     {questionError ? <p className="auth-error">{questionError}</p> : null}
+                    {adminQuizError ? <p className="auth-error">{adminQuizError}</p> : null}
+                    {adminQuizLoading ? <p>Loading quiz questions...</p> : null}
 
-                    <button type="submit" className="btn btn-primary" disabled={!quizCategories.length}>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={!quizCategories.length || adminQuizLoading}
+                    >
                       Add Admin Question
                     </button>
                   </form>
@@ -895,6 +907,7 @@ function Admin({
                             <button
                               type="button"
                               className="btn btn-light"
+                              disabled={adminQuizLoading}
                               onClick={() => onDeleteAdminQuestion(item.id)}
                             >
                               Delete

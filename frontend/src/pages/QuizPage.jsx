@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 const TAB_EXPLORE = 'Explore Quizzes'
 const TAB_CREATE = 'Create Quiz'
@@ -29,8 +29,11 @@ function QuizPage({
   user,
   quizCategories,
   adminQuizzes,
+  adminQuizLoading,
+  adminQuizError,
   userQuizzes,
   quizSessionState,
+  onLoadAdminQuizzes,
   onRequireAuth,
   onSaveUserQuiz,
   onDeleteUserQuiz,
@@ -53,6 +56,10 @@ function QuizPage({
 
     return userQuizzes.filter((item) => item.owner === user.username)
   }, [user, userQuizzes])
+
+  useEffect(() => {
+    onLoadAdminQuizzes()
+  }, [onLoadAdminQuizzes])
 
   const startQuizSession = (title, mode, questions, sourceQuizId = null) => {
     onUpdateQuizSession({
@@ -436,8 +443,15 @@ function QuizPage({
           </div>
 
           {exploreError ? <p className="auth-error">{exploreError}</p> : null}
+          {adminQuizLoading ? <p>Loading quiz questions...</p> : null}
+          {adminQuizError ? <p className="auth-error">{adminQuizError}</p> : null}
 
-          <button type="button" className="btn btn-primary" onClick={startAdminQuiz}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={startAdminQuiz}
+            disabled={adminQuizLoading || Boolean(adminQuizError)}
+          >
             Start Admin Quiz
           </button>
         </section>

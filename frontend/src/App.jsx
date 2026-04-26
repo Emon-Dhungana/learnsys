@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import {
   addDoc,
@@ -51,14 +51,6 @@ function App() {
     }
   }
 
-  const readStoredAdminSession = () => {
-    try {
-      return localStorage.getItem(adminStorageKey) === 'true'
-    } catch {
-      return false
-    }
-  }
-
   const navigate = useNavigate()
   const [courseCategories, setCourseCategories] = useState([])
   const [quizCategories, setQuizCategories] = useState([])
@@ -80,7 +72,7 @@ function App() {
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false)
   const [authView, setAuthView] = useState('login')
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false)
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => readStoredAdminSession())
+  const [isAdmin, setIsAdmin] = useState(false)
   const [adminAuthError, setAdminAuthError] = useState('')
   const [adminQuizzes, setAdminQuizzes] = useState([])
   const [adminQuizLoading, setAdminQuizLoading] = useState(false)
@@ -92,6 +84,34 @@ function App() {
   const [uploadedResources, setUploadedResources] = useState([])
 
   const navLinks = ['Home', 'Courses', 'Quiz', 'Typing', 'Dashboard']
+
+  useEffect(() => {
+    const storedAdmin = localStorage.getItem(adminStorageKey)
+
+    console.log('storedAdmin value:', storedAdmin)
+
+    const timeoutId = window.setTimeout(() => {
+      const storedUser = readStoredUser()
+
+      if (storedUser?.username) {
+        setCurrentUser(storedUser)
+        setUserPreferencesByUsername({
+          [storedUser.username]: storedUser.preferences ?? {
+            categories: [],
+            subcategories: [],
+          },
+        })
+      }
+
+      if (storedAdmin === 'true') {
+        setIsAdmin(true)
+      }
+
+      console.log('isAdmin after restore:', storedAdmin === 'true')
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [])
 
   const sanitizePreferences = (preferences, nextCategories = courseCategories) => {
     const validCategories = new Set(nextCategories.map((item) => item.name))
@@ -170,7 +190,7 @@ function App() {
 
   const handleLogout = () => {
     setCurrentUser(null)
-    setIsAdminAuthenticated(false)
+    setIsAdmin(false)
     setIsPreferencesOpen(false)
     localStorage.removeItem(userStorageKey)
     localStorage.removeItem(adminStorageKey)
@@ -200,7 +220,7 @@ function App() {
       return
     }
 
-    setIsAdminAuthenticated(true)
+    setIsAdmin(true)
     setAdminAuthError('')
     setIsAdminAuthOpen(false)
     localStorage.setItem(adminStorageKey, 'true')
@@ -209,7 +229,7 @@ function App() {
   }
 
   const handleAdminLogout = () => {
-    setIsAdminAuthenticated(false)
+    setIsAdmin(false)
     localStorage.removeItem(adminStorageKey)
     navigate('/')
   }
@@ -779,7 +799,7 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute isAllowed={isAdminAuthenticated} redirectPath="/">
+              <ProtectedRoute isAllowed={isAdmin} redirectPath="/">
                 <Admin
                   courseCategories={courseCategories}
                   quizCategories={quizCategories}

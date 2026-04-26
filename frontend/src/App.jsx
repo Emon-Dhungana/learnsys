@@ -5,9 +5,11 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   query,
   serverTimestamp,
+  setDoc,
   where,
   writeBatch,
 } from 'firebase/firestore'
@@ -106,6 +108,7 @@ function App() {
   const [uploadedResources, setUploadedResources] = useState(() =>
     readStoredArray(uploadedResourcesStorageKey),
   )
+  const [isAppDataRestored, setIsAppDataRestored] = useState(false)
 
   const navLinks = ['Home', 'Courses', 'Quiz', 'Typing', 'Dashboard']
 
@@ -161,6 +164,96 @@ function App() {
   useEffect(() => {
     localStorage.setItem(uploadedResourcesStorageKey, JSON.stringify(uploadedResources))
   }, [uploadedResources])
+
+  useEffect(() => {
+    let isCancelled = false
+
+    const restoreAppData = async () => {
+      try {
+        const [courseCategoriesDoc, quizCategoriesDoc, resourcesDoc] = await Promise.all([
+          getDoc(doc(db, 'app_state', 'course_categories')),
+          getDoc(doc(db, 'app_state', 'quiz_categories')),
+          getDoc(doc(db, 'app_state', 'resources')),
+        ])
+
+        if (isCancelled) {
+          return
+        }
+
+        if (courseCategoriesDoc.exists()) {
+          const firestoreCourseCategories = courseCategoriesDoc.data()?.items
+          if (Array.isArray(firestoreCourseCategories)) {
+            setCourseCategories(firestoreCourseCategories)
+          }
+        }
+
+        if (quizCategoriesDoc.exists()) {
+          const firestoreQuizCategories = quizCategoriesDoc.data()?.items
+          if (Array.isArray(firestoreQuizCategories)) {
+            setQuizCategories(firestoreQuizCategories)
+          }
+        }
+
+        if (resourcesDoc.exists()) {
+          const firestoreResources = resourcesDoc.data()?.items
+          if (Array.isArray(firestoreResources)) {
+            setUploadedResources(firestoreResources)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to restore app state from Firestore:', error)
+      } finally {
+        if (!isCancelled) {
+          setIsAppDataRestored(true)
+        }
+      }
+    }
+
+    queueMicrotask(restoreAppData)
+
+    return () => {
+      isCancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isAppDataRestored) {
+      return
+    }
+
+    setDoc(doc(db, 'app_state', 'course_categories'), {
+      items: courseCategories,
+      updatedAt: Date.now(),
+    }).catch((error) => {
+      console.error('Failed to sync course categories to Firestore:', error)
+    })
+  }, [courseCategories, isAppDataRestored])
+
+  useEffect(() => {
+    if (!isAppDataRestored) {
+      return
+    }
+
+    setDoc(doc(db, 'app_state', 'quiz_categories'), {
+      items: quizCategories,
+      updatedAt: Date.now(),
+    }).catch((error) => {
+      console.error('Failed to sync quiz categories to Firestore:', error)
+    })
+  }, [quizCategories, isAppDataRestored])
+
+  useEffect(() => {
+    if (!isAppDataRestored) {
+      return
+    }
+
+    setDoc(doc(db, 'app_state', 'resources'), {
+      items: uploadedResources,
+      updatedAt: Date.now(),
+    }).catch((error) => {
+      console.error('Failed to sync resources to Firestore:', error)
+    })
+  }, [uploadedResources, isAppDataRestored])
 
   const sanitizePreferenceMap = (preferenceMap, nextCategories) => {
     const nextMap = {}

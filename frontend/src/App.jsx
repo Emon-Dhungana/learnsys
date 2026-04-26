@@ -41,6 +41,9 @@ function App() {
   const ADMIN_PASSWORD = 'admin123'
   const userStorageKey = 'learnsys_user'
   const adminStorageKey = 'learnsys_admin'
+  const courseCategoriesStorageKey = 'learnsys_course_categories'
+  const quizCategoriesStorageKey = 'learnsys_quiz_categories'
+  const uploadedResourcesStorageKey = 'learnsys_uploaded_resources'
 
   const readStoredUser = () => {
     try {
@@ -51,9 +54,27 @@ function App() {
     }
   }
 
+  const readStoredArray = (key) => {
+    try {
+      const storedValue = localStorage.getItem(key)
+      if (!storedValue) {
+        return []
+      }
+
+      const parsed = JSON.parse(storedValue)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+
   const navigate = useNavigate()
-  const [courseCategories, setCourseCategories] = useState([])
-  const [quizCategories, setQuizCategories] = useState([])
+  const [courseCategories, setCourseCategories] = useState(() =>
+    readStoredArray(courseCategoriesStorageKey),
+  )
+  const [quizCategories, setQuizCategories] = useState(() =>
+    readStoredArray(quizCategoriesStorageKey),
+  )
   const [currentUser, setCurrentUser] = useState(() => readStoredUser())
   const [userPreferencesByUsername, setUserPreferencesByUsername] = useState(() => {
     const storedUser = readStoredUser()
@@ -82,7 +103,9 @@ function App() {
   const [quizSessionState, setQuizSessionState] = useState(null)
   const [typingSessionState, setTypingSessionState] = useState(null)
   const [typingStatsByUsername, setTypingStatsByUsername] = useState({})
-  const [uploadedResources, setUploadedResources] = useState([])
+  const [uploadedResources, setUploadedResources] = useState(() =>
+    readStoredArray(uploadedResourcesStorageKey),
+  )
 
   const navLinks = ['Home', 'Courses', 'Quiz', 'Typing', 'Dashboard']
 
@@ -126,6 +149,18 @@ function App() {
       subcategories: (preferences?.subcategories ?? []).filter((item) => validSubcategories.has(item)),
     }
   }
+
+  useEffect(() => {
+    localStorage.setItem(courseCategoriesStorageKey, JSON.stringify(courseCategories))
+  }, [courseCategories])
+
+  useEffect(() => {
+    localStorage.setItem(quizCategoriesStorageKey, JSON.stringify(quizCategories))
+  }, [quizCategories])
+
+  useEffect(() => {
+    localStorage.setItem(uploadedResourcesStorageKey, JSON.stringify(uploadedResources))
+  }, [uploadedResources])
 
   const sanitizePreferenceMap = (preferenceMap, nextCategories) => {
     const nextMap = {}

@@ -208,7 +208,9 @@ function Admin({
 
   const selectedCourseCategory = courseCategories.find((item) => item.id === uploadData.categoryId)
   const selectedQuizCategory = quizCategories.find((item) => item.id === questionData.categoryId)
-  const totalCourses = courseCategories.length
+  const totalCourses = new Set(
+    resources.map((resource) => resource.title.trim().toLowerCase()),
+  ).size
   const totalResources = resources.length
   const totalQuizQuestions = adminQuizzes.length
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { uploadToCloudinary } from '../utils/uploadToCloudinary'
 
 const ADMIN_TABS = [
@@ -160,6 +160,7 @@ function Admin({
   onDeleteQuizSubcategory,
   onAddAdminQuestion,
   onDeleteAdminQuestion,
+  onLoadAdminQuizzes,
   onUploadResource,
   onDeleteResource,
   onAdminLogout,
@@ -210,6 +211,10 @@ function Admin({
   const totalCourses = courseCategories.length
   const totalResources = resources.length
   const totalQuizQuestions = adminQuizzes.length
+
+  useEffect(() => {
+    onLoadAdminQuizzes()
+  }, [onLoadAdminQuizzes])
 
   const isDuplicateCategoryName = (categoryList, name, ignoreId = null) => {
     return categoryList.some(

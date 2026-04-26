@@ -822,6 +822,7 @@ function App() {
                     onDeleteQuizSubcategory={handleDeleteQuizSubcategory}
                     onAddAdminQuestion={handleAddAdminQuestion}
                     onDeleteAdminQuestion={handleDeleteAdminQuestion}
+                    onLoadAdminQuizzes={loadAdminQuizzes}
                     onUploadResource={handleUploadResource}
                     onDeleteResource={handleDeleteResource}
                     onAdminLogout={handleAdminLogout}

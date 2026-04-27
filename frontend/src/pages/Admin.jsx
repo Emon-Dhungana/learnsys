@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { uploadToCloudinary } from '../utils/uploadToCloudinary'
 
 const ADMIN_TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'courseManagement', label: 'Course Management' },
   { id: 'quizManagement', label: 'Quiz Management' },
+  { id: 'userManagement', label: 'User Management' },
 ]
 
 function CategoryManagerSection({
@@ -209,6 +210,7 @@ function Admin({
   const [uploadLoading, setUploadLoading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadFileInputKey, setUploadFileInputKey] = useState(0)
+  const [userSearch, setUserSearch] = useState('')
 
   const selectedCourseCategory = courseCategories.find((item) => item.id === uploadData.categoryId)
   const selectedQuizCategory = quizCategories.find((item) => item.id === questionData.categoryId)
@@ -218,6 +220,19 @@ function Admin({
   const totalResources = resources.length
   const totalQuizQuestions = adminQuizzes.length
   const totalRegisteredUsers = adminUsers.length
+
+  const filteredAdminUsers = useMemo(() => {
+    const queryText = userSearch.trim().toLowerCase()
+    if (!queryText) {
+      return adminUsers
+    }
+
+    return adminUsers.filter((userItem) => {
+      const usernameMatch = (userItem.username ?? '').toLowerCase().includes(queryText)
+      const emailMatch = (userItem.email ?? '').toLowerCase().includes(queryText)
+      return usernameMatch || emailMatch
+    })
+  }, [adminUsers, userSearch])
 
   useEffect(() => {
     onLoadAdminQuizzes()
@@ -646,7 +661,7 @@ function Admin({
               <section className="admin-panel" aria-label="Overview section">
                 <div className="admin-panel-head">
                   <h2>Overview</h2>
-                  <p>Quick snapshot of your current content inventory.</p>
+                  <p>Quick snapshot of your platform and what to manage next.</p>
                 </div>
 
                 <div className="admin-stats-grid">
@@ -671,42 +686,17 @@ function Admin({
                 <div className="admin-overview-grid">
                   <article className="admin-info-card">
                     <h3>Course Pipeline</h3>
-                    <p>Upload fresh materials and keep the course library updated by category.</p>
+                    <p>Create categories first, then upload resources with clean metadata.</p>
                   </article>
                   <article className="admin-info-card">
                     <h3>Assessment Readiness</h3>
-                    <p>Maintain a balanced quiz bank across quiz categories and subcategories.</p>
+                    <p>Keep question quality high by balancing categories and subcategories.</p>
+                  </article>
+                  <article className="admin-info-card">
+                    <h3>User Management</h3>
+                    <p>Use the dedicated User Management tab to review and maintain accounts.</p>
                   </article>
                 </div>
-
-                <section className="admin-resource-list" aria-label="Registered users list">
-                  <h3>Registered Users</h3>
-                  {adminUsersError ? <p className="auth-error">{adminUsersError}</p> : null}
-                  {adminUsersLoading ? <p>Loading registered users...</p> : null}
-
-                  {!adminUsersLoading && adminUsers.length === 0 ? (
-                    <p>No users registered yet.</p>
-                  ) : (
-                    <div className="admin-resource-grid">
-                      {adminUsers.map((userItem) => (
-                        <article key={userItem.id} className="admin-resource-card">
-                          <h3>{userItem.username}</h3>
-                          <p className="admin-resource-meta">Email: {userItem.email || 'N/A'}</p>
-                          <p className="admin-resource-meta">
-                            Member Since: {formatMemberSince(userItem.createdAtMs)}
-                          </p>
-                          <button
-                            type="button"
-                            className="btn btn-light admin-mini-btn is-danger"
-                            onClick={() => handleDeleteUser(userItem)}
-                          >
-                            Delete User
-                          </button>
-                        </article>
-                      ))}
-                    </div>
-                  )}
-                </section>
               </section>
             ) : null}
 
@@ -714,121 +704,141 @@ function Admin({
               <section className="admin-panel" aria-label="Course management section">
                 <div className="admin-panel-head">
                   <h2>Course Management</h2>
-                  <p>Manage course categories, subcategories, and uploaded resources from one place.</p>
+                  <p>Structure categories, upload resources, and maintain your course library in one flow.</p>
                 </div>
 
-                <div className="admin-management-grid">
-                  <CategoryManagerSection
-                    title="Manage Course Categories"
-                    emptyMessage="No course categories yet. Add one to begin managing subcategories."
-                    addPlaceholder="New course category"
-                    categoryList={courseCategories}
-                    categoryName={courseCategoryName}
-                    categoryError={courseCategoryError}
-                    subcategoryError={courseSubcategoryError}
-                    editingCategoryId={editingCourseCategoryId}
-                    editingCategoryName={editingCourseCategoryName}
-                    subcategoryInput={courseSubcategoryInput}
-                    onCategoryNameChange={(event) => {
-                      setCourseCategoryName(event.target.value)
-                      setCourseCategoryError('')
-                    }}
-                    onAddCategory={handleAddCourseCategorySubmit}
-                    onStartEdit={startCourseCategoryEdit}
-                    onEditingCategoryNameChange={(event) => setEditingCourseCategoryName(event.target.value)}
-                    onSaveEdit={saveCourseCategoryEdit}
-                    onCancelEdit={cancelCourseCategoryEdit}
-                    onDeleteCategory={removeCourseCategory}
-                    onSubcategoryInputChange={handleCourseSubcategoryInputChange}
-                    onAddSubcategory={addCourseSubcategory}
-                    onDeleteSubcategory={removeCourseSubcategory}
-                  />
+                <div className="admin-surface-kpis">
+                  <span className="admin-kpi-chip">{courseCategories.length} Categories</span>
+                  <span className="admin-kpi-chip">{resources.length} Uploaded Resources</span>
+                  <span className="admin-kpi-chip">{totalCourses} Unique Courses</span>
+                </div>
 
-                  <form className="admin-form" onSubmit={handleUploadSubmit}>
-                    <h3>Upload New Course Resource</h3>
-                    <label htmlFor="resource-title">Title</label>
-                    <input
-                      id="resource-title"
-                      name="title"
-                      type="text"
-                      value={uploadData.title}
-                      onChange={handleUploadChange}
-                      placeholder="Resource title"
-                    />
+                <div className="admin-workflow-grid">
+                  <section className="admin-surface" aria-label="Course category workspace">
+                    <div className="admin-surface-head">
+                      <h3>Category Workspace</h3>
+                      <p>Create and maintain categories/subcategories before uploading resources.</p>
+                    </div>
 
-                    <label htmlFor="resource-description">Description</label>
-                    <textarea
-                      id="resource-description"
-                      name="description"
-                      value={uploadData.description}
-                      onChange={handleUploadChange}
-                      placeholder="Short resource description"
-                    />
-
-                    <label htmlFor="resource-category">Course Category</label>
-                    <select
-                      id="resource-category"
-                      name="categoryId"
-                      value={uploadData.categoryId}
-                      onChange={(event) => {
-                        const nextCategoryId = event.target.value
-                        const nextCategory = courseCategories.find((item) => item.id === nextCategoryId)
-
-                        setUploadData((prev) => ({
-                          ...prev,
-                          categoryId: nextCategoryId,
-                          subcategory: nextCategory?.subcategories[0] ?? '',
-                        }))
-                        setUploadError('')
+                    <CategoryManagerSection
+                      title="Manage Course Categories"
+                      emptyMessage="No course categories yet. Add one to begin managing subcategories."
+                      addPlaceholder="New course category"
+                      categoryList={courseCategories}
+                      categoryName={courseCategoryName}
+                      categoryError={courseCategoryError}
+                      subcategoryError={courseSubcategoryError}
+                      editingCategoryId={editingCourseCategoryId}
+                      editingCategoryName={editingCourseCategoryName}
+                      subcategoryInput={courseSubcategoryInput}
+                      onCategoryNameChange={(event) => {
+                        setCourseCategoryName(event.target.value)
+                        setCourseCategoryError('')
                       }}
-                      disabled={!courseCategories.length}
-                    >
-                      <option value="">Select category</option>
-                      {courseCategories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <label htmlFor="resource-subcategory">Course Subcategory</label>
-                    <select
-                      id="resource-subcategory"
-                      name="subcategory"
-                      value={uploadData.subcategory}
-                      onChange={handleUploadChange}
-                      disabled={!selectedCourseCategory || !selectedCourseCategory.subcategories.length}
-                    >
-                      <option value="">Select subcategory</option>
-                      {(selectedCourseCategory?.subcategories ?? []).map((subcategoryName) => (
-                        <option key={subcategoryName} value={subcategoryName}>
-                          {subcategoryName}
-                        </option>
-                      ))}
-                    </select>
-
-                    <label htmlFor="resource-file">File</label>
-                    <input
-                      key={uploadFileInputKey}
-                      id="resource-file"
-                      name="file"
-                      type="file"
-                      onChange={handleUploadChange}
+                      onAddCategory={handleAddCourseCategorySubmit}
+                      onStartEdit={startCourseCategoryEdit}
+                      onEditingCategoryNameChange={(event) => setEditingCourseCategoryName(event.target.value)}
+                      onSaveEdit={saveCourseCategoryEdit}
+                      onCancelEdit={cancelCourseCategoryEdit}
+                      onDeleteCategory={removeCourseCategory}
+                      onSubcategoryInputChange={handleCourseSubcategoryInputChange}
+                      onAddSubcategory={addCourseSubcategory}
+                      onDeleteSubcategory={removeCourseSubcategory}
                     />
+                  </section>
 
-                    {uploadError ? <p className="auth-error">{uploadError}</p> : null}
-                    {uploadLoading ? (
-                      <p className="admin-upload-status">Uploading... {uploadProgress}%</p>
-                    ) : null}
+                  <section className="admin-surface" aria-label="Course upload workspace">
+                    <div className="admin-surface-head">
+                      <h3>Upload Workspace</h3>
+                      <p>Publish resources with clear labels so users can find them quickly.</p>
+                    </div>
 
-                    <button
-                      type="submit"
-                      className="btn btn-primary"
-                      disabled={!courseCategories.length || uploadLoading}
-                    >
-                      {uploadLoading ? 'Uploading...' : 'Upload Resource'}
-                    </button>
-                  </form>
+                    <form className="admin-form" onSubmit={handleUploadSubmit}>
+                      <h3>Upload New Course Resource</h3>
+                      <label htmlFor="resource-title">Title</label>
+                      <input
+                        id="resource-title"
+                        name="title"
+                        type="text"
+                        value={uploadData.title}
+                        onChange={handleUploadChange}
+                        placeholder="Resource title"
+                      />
+
+                      <label htmlFor="resource-description">Description</label>
+                      <textarea
+                        id="resource-description"
+                        name="description"
+                        value={uploadData.description}
+                        onChange={handleUploadChange}
+                        placeholder="Short resource description"
+                      />
+
+                      <label htmlFor="resource-category">Course Category</label>
+                      <select
+                        id="resource-category"
+                        name="categoryId"
+                        value={uploadData.categoryId}
+                        onChange={(event) => {
+                          const nextCategoryId = event.target.value
+                          const nextCategory = courseCategories.find((item) => item.id === nextCategoryId)
+
+                          setUploadData((prev) => ({
+                            ...prev,
+                            categoryId: nextCategoryId,
+                            subcategory: nextCategory?.subcategories[0] ?? '',
+                          }))
+                          setUploadError('')
+                        }}
+                        disabled={!courseCategories.length}
+                      >
+                        <option value="">Select category</option>
+                        {courseCategories.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <label htmlFor="resource-subcategory">Course Subcategory</label>
+                      <select
+                        id="resource-subcategory"
+                        name="subcategory"
+                        value={uploadData.subcategory}
+                        onChange={handleUploadChange}
+                        disabled={!selectedCourseCategory || !selectedCourseCategory.subcategories.length}
+                      >
+                        <option value="">Select subcategory</option>
+                        {(selectedCourseCategory?.subcategories ?? []).map((subcategoryName) => (
+                          <option key={subcategoryName} value={subcategoryName}>
+                            {subcategoryName}
+                          </option>
+                        ))}
+                      </select>
+
+                      <label htmlFor="resource-file">File</label>
+                      <input
+                        key={uploadFileInputKey}
+                        id="resource-file"
+                        name="file"
+                        type="file"
+                        onChange={handleUploadChange}
+                      />
+
+                      {uploadError ? <p className="auth-error">{uploadError}</p> : null}
+                      {uploadLoading ? (
+                        <p className="admin-upload-status">Uploading... {uploadProgress}%</p>
+                      ) : null}
+
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={!courseCategories.length || uploadLoading}
+                      >
+                        {uploadLoading ? 'Uploading...' : 'Upload Resource'}
+                      </button>
+                    </form>
+                  </section>
                 </div>
 
                 <section className="admin-resource-list" aria-label="Uploaded resources">
@@ -865,120 +875,140 @@ function Admin({
               <section className="admin-panel" aria-label="Quiz management section">
                 <div className="admin-panel-head">
                   <h2>Quiz Management</h2>
-                  <p>Manage quiz categories and keep your question bank updated in one workspace.</p>
+                  <p>Organize categories and build a high-quality question bank from one workflow.</p>
                 </div>
 
-                <div className="admin-management-grid">
-                  <CategoryManagerSection
-                    title="Manage Quiz Categories"
-                    emptyMessage="No quiz categories yet. Add one to begin managing subcategories."
-                    addPlaceholder="New quiz category"
-                    categoryList={quizCategories}
-                    categoryName={quizCategoryName}
-                    categoryError={quizCategoryError}
-                    subcategoryError={quizSubcategoryError}
-                    editingCategoryId={editingQuizCategoryId}
-                    editingCategoryName={editingQuizCategoryName}
-                    subcategoryInput={quizSubcategoryInput}
-                    onCategoryNameChange={(event) => {
-                      setQuizCategoryName(event.target.value)
-                      setQuizCategoryError('')
-                    }}
-                    onAddCategory={handleAddQuizCategorySubmit}
-                    onStartEdit={startQuizCategoryEdit}
-                    onEditingCategoryNameChange={(event) => setEditingQuizCategoryName(event.target.value)}
-                    onSaveEdit={saveQuizCategoryEdit}
-                    onCancelEdit={cancelQuizCategoryEdit}
-                    onDeleteCategory={removeQuizCategory}
-                    onSubcategoryInputChange={handleQuizSubcategoryInputChange}
-                    onAddSubcategory={addQuizSubcategory}
-                    onDeleteSubcategory={removeQuizSubcategory}
-                  />
+                <div className="admin-surface-kpis">
+                  <span className="admin-kpi-chip">{quizCategories.length} Quiz Categories</span>
+                  <span className="admin-kpi-chip">{totalQuizQuestions} Question Bank Size</span>
+                  <span className="admin-kpi-chip">Admin Maintained</span>
+                </div>
 
-                  <section className="admin-quiz-panel" aria-label="Admin quiz manager">
-                    <form className="admin-form" onSubmit={handleAdminQuestionSubmit}>
-                      <h3>Add Quiz Question</h3>
-                      <label htmlFor="admin-question">Question</label>
-                      <textarea
-                        id="admin-question"
-                        name="question"
-                        value={questionData.question}
-                        onChange={handleQuestionFieldChange}
-                        placeholder="Enter quiz question"
-                      />
+                <div className="admin-workflow-grid">
+                  <section className="admin-surface" aria-label="Quiz category workspace">
+                    <div className="admin-surface-head">
+                      <h3>Category Workspace</h3>
+                      <p>Keep quiz categories and subcategories clean for better coverage.</p>
+                    </div>
 
-                      <label htmlFor="admin-question-category">Category</label>
-                      <select
-                        id="admin-question-category"
-                        name="categoryId"
-                        value={questionData.categoryId}
-                        onChange={handleQuestionFieldChange}
-                        disabled={!quizCategories.length}
-                      >
-                        <option value="">Select category</option>
-                        {quizCategories.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
+                    <CategoryManagerSection
+                      title="Manage Quiz Categories"
+                      emptyMessage="No quiz categories yet. Add one to begin managing subcategories."
+                      addPlaceholder="New quiz category"
+                      categoryList={quizCategories}
+                      categoryName={quizCategoryName}
+                      categoryError={quizCategoryError}
+                      subcategoryError={quizSubcategoryError}
+                      editingCategoryId={editingQuizCategoryId}
+                      editingCategoryName={editingQuizCategoryName}
+                      subcategoryInput={quizSubcategoryInput}
+                      onCategoryNameChange={(event) => {
+                        setQuizCategoryName(event.target.value)
+                        setQuizCategoryError('')
+                      }}
+                      onAddCategory={handleAddQuizCategorySubmit}
+                      onStartEdit={startQuizCategoryEdit}
+                      onEditingCategoryNameChange={(event) => setEditingQuizCategoryName(event.target.value)}
+                      onSaveEdit={saveQuizCategoryEdit}
+                      onCancelEdit={cancelQuizCategoryEdit}
+                      onDeleteCategory={removeQuizCategory}
+                      onSubcategoryInputChange={handleQuizSubcategoryInputChange}
+                      onAddSubcategory={addQuizSubcategory}
+                      onDeleteSubcategory={removeQuizSubcategory}
+                    />
+                  </section>
 
-                      <label htmlFor="admin-question-subcategory">Subcategory</label>
-                      <select
-                        id="admin-question-subcategory"
-                        name="subcategory"
-                        value={questionData.subcategory}
-                        onChange={handleQuestionFieldChange}
-                        disabled={!selectedQuizCategory || !selectedQuizCategory.subcategories.length}
-                      >
-                        <option value="">Select subcategory</option>
-                        {(selectedQuizCategory?.subcategories ?? []).map((subcategoryName) => (
-                          <option key={subcategoryName} value={subcategoryName}>
-                            {subcategoryName}
-                          </option>
-                        ))}
-                      </select>
+                  <section className="admin-surface" aria-label="Quiz creation workspace">
+                    <div className="admin-surface-head">
+                      <h3>Question Creation Workspace</h3>
+                      <p>Create questions with category mapping and option-level validation.</p>
+                    </div>
 
-                      <div className="admin-options-grid">
-                        {['A', 'B', 'C', 'D'].map((key) => (
-                          <label key={key} className="admin-option-field" htmlFor={`option-${key}`}>
-                            Option {key}
-                            <input
-                              id={`option-${key}`}
-                              type="text"
-                              value={questionData.options[key]}
-                              onChange={(event) => handleOptionChange(key, event.target.value)}
-                              placeholder={`Enter option ${key}`}
-                            />
-                          </label>
-                        ))}
-                      </div>
+                    <section className="admin-quiz-panel" aria-label="Admin quiz manager">
+                      <form className="admin-form" onSubmit={handleAdminQuestionSubmit}>
+                        <h3>Add Quiz Question</h3>
+                        <label htmlFor="admin-question">Question</label>
+                        <textarea
+                          id="admin-question"
+                          name="question"
+                          value={questionData.question}
+                          onChange={handleQuestionFieldChange}
+                          placeholder="Enter quiz question"
+                        />
 
-                      <label htmlFor="correct-answer">Correct Answer</label>
-                      <select
-                        id="correct-answer"
-                        name="correctAnswer"
-                        value={questionData.correctAnswer}
-                        onChange={handleQuestionFieldChange}
-                      >
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
-                      </select>
+                        <label htmlFor="admin-question-category">Category</label>
+                        <select
+                          id="admin-question-category"
+                          name="categoryId"
+                          value={questionData.categoryId}
+                          onChange={handleQuestionFieldChange}
+                          disabled={!quizCategories.length}
+                        >
+                          <option value="">Select category</option>
+                          {quizCategories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
 
-                      {questionError ? <p className="auth-error">{questionError}</p> : null}
-                      {adminQuizError ? <p className="auth-error">{adminQuizError}</p> : null}
-                      {adminQuizLoading ? <p>Loading quiz questions...</p> : null}
+                        <label htmlFor="admin-question-subcategory">Subcategory</label>
+                        <select
+                          id="admin-question-subcategory"
+                          name="subcategory"
+                          value={questionData.subcategory}
+                          onChange={handleQuestionFieldChange}
+                          disabled={!selectedQuizCategory || !selectedQuizCategory.subcategories.length}
+                        >
+                          <option value="">Select subcategory</option>
+                          {(selectedQuizCategory?.subcategories ?? []).map((subcategoryName) => (
+                            <option key={subcategoryName} value={subcategoryName}>
+                              {subcategoryName}
+                            </option>
+                          ))}
+                        </select>
 
-                      <button
-                        type="submit"
-                        className="btn btn-primary"
-                        disabled={!quizCategories.length || adminQuizLoading}
-                      >
-                        Add Admin Question
-                      </button>
-                    </form>
+                        <div className="admin-options-grid">
+                          {['A', 'B', 'C', 'D'].map((key) => (
+                            <label key={key} className="admin-option-field" htmlFor={`option-${key}`}>
+                              Option {key}
+                              <input
+                                id={`option-${key}`}
+                                type="text"
+                                value={questionData.options[key]}
+                                onChange={(event) => handleOptionChange(key, event.target.value)}
+                                placeholder={`Enter option ${key}`}
+                              />
+                            </label>
+                          ))}
+                        </div>
+
+                        <label htmlFor="correct-answer">Correct Answer</label>
+                        <select
+                          id="correct-answer"
+                          name="correctAnswer"
+                          value={questionData.correctAnswer}
+                          onChange={handleQuestionFieldChange}
+                        >
+                          <option value="A">A</option>
+                          <option value="B">B</option>
+                          <option value="C">C</option>
+                          <option value="D">D</option>
+                        </select>
+
+                        {questionError ? <p className="auth-error">{questionError}</p> : null}
+                        {adminQuizError ? <p className="auth-error">{adminQuizError}</p> : null}
+                        {adminQuizLoading ? <p>Loading quiz questions...</p> : null}
+
+                        <button
+                          type="submit"
+                          className="btn btn-primary"
+                          disabled={!quizCategories.length || adminQuizLoading}
+                        >
+                          Add Admin Question
+                        </button>
+                      </form>
+                    </section>
                   </section>
                 </div>
 
@@ -1012,6 +1042,63 @@ function Admin({
                     </div>
                   )}
                 </div>
+              </section>
+            ) : null}
+
+            {activeTab === 'userManagement' ? (
+              <section className="admin-panel" aria-label="User management section">
+                <div className="admin-panel-head">
+                  <h2>User Management</h2>
+                  <p>Review registered users, search quickly, and remove accounts when needed.</p>
+                </div>
+
+                <div className="admin-surface-kpis">
+                  <span className="admin-kpi-chip">{totalRegisteredUsers} Total Users</span>
+                  <span className="admin-kpi-chip">{filteredAdminUsers.length} Search Results</span>
+                </div>
+
+                <section className="admin-surface" aria-label="User records workspace">
+                  <div className="admin-surface-head">
+                    <h3>Registered User Records</h3>
+                    <p>Find users by username or email and manage accounts safely.</p>
+                  </div>
+
+                  <div className="admin-user-toolbar">
+                    <input
+                      className="admin-user-search"
+                      type="text"
+                      value={userSearch}
+                      onChange={(event) => setUserSearch(event.target.value)}
+                      placeholder="Search by username or email"
+                    />
+                  </div>
+
+                  {adminUsersError ? <p className="auth-error">{adminUsersError}</p> : null}
+                  {adminUsersLoading ? <p>Loading registered users...</p> : null}
+
+                  {!adminUsersLoading && filteredAdminUsers.length === 0 ? (
+                    <p>{userSearch.trim() ? 'No users match your search.' : 'No users registered yet.'}</p>
+                  ) : (
+                    <div className="admin-resource-grid">
+                      {filteredAdminUsers.map((userItem) => (
+                        <article key={userItem.id} className="admin-resource-card">
+                          <h3>{userItem.username}</h3>
+                          <p className="admin-resource-meta">Email: {userItem.email || 'N/A'}</p>
+                          <p className="admin-resource-meta">
+                            Member Since: {formatMemberSince(userItem.createdAtMs)}
+                          </p>
+                          <button
+                            type="button"
+                            className="btn btn-light admin-mini-btn is-danger"
+                            onClick={() => handleDeleteUser(userItem)}
+                          >
+                            Delete User
+                          </button>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </section>
               </section>
             ) : null}
           </div>

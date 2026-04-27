@@ -40,7 +40,7 @@ function CategoryManagerSection({
           onChange={onCategoryNameChange}
           placeholder={addPlaceholder}
         />
-        <button type="submit" className="btn btn-primary">
+        <button type="submit" className="btn btn-primary admin-mini-btn">
           Add Category
         </button>
       </form>
@@ -65,12 +65,12 @@ function CategoryManagerSection({
                   <div className="admin-small-actions">
                     <button
                       type="button"
-                      className="btn btn-primary"
+                      className="btn btn-primary admin-mini-btn"
                       onClick={() => onSaveEdit(category.id)}
                     >
                       Save
                     </button>
-                    <button type="button" className="btn btn-light" onClick={onCancelEdit}>
+                    <button type="button" className="btn btn-light admin-mini-btn" onClick={onCancelEdit}>
                       Cancel
                     </button>
                   </div>
@@ -81,14 +81,14 @@ function CategoryManagerSection({
                   <div className="admin-small-actions">
                     <button
                       type="button"
-                      className="btn btn-light"
+                      className="btn btn-light admin-mini-btn"
                       onClick={() => onStartEdit(category)}
                     >
                       Edit
                     </button>
                     <button
                       type="button"
-                      className="btn btn-light"
+                      className="btn btn-light admin-mini-btn is-danger"
                       onClick={() => onDeleteCategory(category)}
                     >
                       Delete
@@ -106,7 +106,7 @@ function CategoryManagerSection({
                       <span>{subcategoryName}</span>
                       <button
                         type="button"
-                        className="btn btn-light"
+                        className="btn btn-light admin-mini-btn is-danger"
                         onClick={() => onDeleteSubcategory(category, subcategoryName)}
                       >
                         Delete
@@ -125,7 +125,7 @@ function CategoryManagerSection({
                 />
                 <button
                   type="button"
-                  className="btn btn-primary"
+                  className="btn btn-primary admin-mini-btn"
                   onClick={() => onAddSubcategory(category)}
                 >
                   Add Subcategory
@@ -655,111 +655,113 @@ function Admin({
                   <p>Manage course categories, subcategories, and uploaded resources from one place.</p>
                 </div>
 
-                <CategoryManagerSection
-                  title="Manage Course Categories"
-                  emptyMessage="No course categories yet. Add one to begin managing subcategories."
-                  addPlaceholder="New course category"
-                  categoryList={courseCategories}
-                  categoryName={courseCategoryName}
-                  categoryError={courseCategoryError}
-                  subcategoryError={courseSubcategoryError}
-                  editingCategoryId={editingCourseCategoryId}
-                  editingCategoryName={editingCourseCategoryName}
-                  subcategoryInput={courseSubcategoryInput}
-                  onCategoryNameChange={(event) => {
-                    setCourseCategoryName(event.target.value)
-                    setCourseCategoryError('')
-                  }}
-                  onAddCategory={handleAddCourseCategorySubmit}
-                  onStartEdit={startCourseCategoryEdit}
-                  onEditingCategoryNameChange={(event) => setEditingCourseCategoryName(event.target.value)}
-                  onSaveEdit={saveCourseCategoryEdit}
-                  onCancelEdit={cancelCourseCategoryEdit}
-                  onDeleteCategory={removeCourseCategory}
-                  onSubcategoryInputChange={handleCourseSubcategoryInputChange}
-                  onAddSubcategory={addCourseSubcategory}
-                  onDeleteSubcategory={removeCourseSubcategory}
-                />
-
-                <form className="admin-form" onSubmit={handleUploadSubmit}>
-                  <h3>Upload New Course Resource</h3>
-                  <label htmlFor="resource-title">Title</label>
-                  <input
-                    id="resource-title"
-                    name="title"
-                    type="text"
-                    value={uploadData.title}
-                    onChange={handleUploadChange}
-                    placeholder="Resource title"
-                  />
-
-                  <label htmlFor="resource-description">Description</label>
-                  <textarea
-                    id="resource-description"
-                    name="description"
-                    value={uploadData.description}
-                    onChange={handleUploadChange}
-                    placeholder="Short resource description"
-                  />
-
-                  <label htmlFor="resource-category">Course Category</label>
-                  <select
-                    id="resource-category"
-                    name="categoryId"
-                    value={uploadData.categoryId}
-                    onChange={(event) => {
-                      const nextCategoryId = event.target.value
-                      const nextCategory = courseCategories.find((item) => item.id === nextCategoryId)
-
-                      setUploadData((prev) => ({
-                        ...prev,
-                        categoryId: nextCategoryId,
-                        subcategory: nextCategory?.subcategories[0] ?? '',
-                      }))
-                      setUploadError('')
+                <div className="admin-management-grid">
+                  <CategoryManagerSection
+                    title="Manage Course Categories"
+                    emptyMessage="No course categories yet. Add one to begin managing subcategories."
+                    addPlaceholder="New course category"
+                    categoryList={courseCategories}
+                    categoryName={courseCategoryName}
+                    categoryError={courseCategoryError}
+                    subcategoryError={courseSubcategoryError}
+                    editingCategoryId={editingCourseCategoryId}
+                    editingCategoryName={editingCourseCategoryName}
+                    subcategoryInput={courseSubcategoryInput}
+                    onCategoryNameChange={(event) => {
+                      setCourseCategoryName(event.target.value)
+                      setCourseCategoryError('')
                     }}
-                    disabled={!courseCategories.length}
-                  >
-                    <option value="">Select category</option>
-                    {courseCategories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
+                    onAddCategory={handleAddCourseCategorySubmit}
+                    onStartEdit={startCourseCategoryEdit}
+                    onEditingCategoryNameChange={(event) => setEditingCourseCategoryName(event.target.value)}
+                    onSaveEdit={saveCourseCategoryEdit}
+                    onCancelEdit={cancelCourseCategoryEdit}
+                    onDeleteCategory={removeCourseCategory}
+                    onSubcategoryInputChange={handleCourseSubcategoryInputChange}
+                    onAddSubcategory={addCourseSubcategory}
+                    onDeleteSubcategory={removeCourseSubcategory}
+                  />
 
-                  <label htmlFor="resource-subcategory">Course Subcategory</label>
-                  <select
-                    id="resource-subcategory"
-                    name="subcategory"
-                    value={uploadData.subcategory}
-                    onChange={handleUploadChange}
-                    disabled={!selectedCourseCategory || !selectedCourseCategory.subcategories.length}
-                  >
-                    <option value="">Select subcategory</option>
-                    {(selectedCourseCategory?.subcategories ?? []).map((subcategoryName) => (
-                      <option key={subcategoryName} value={subcategoryName}>
-                        {subcategoryName}
-                      </option>
-                    ))}
-                  </select>
+                  <form className="admin-form" onSubmit={handleUploadSubmit}>
+                    <h3>Upload New Course Resource</h3>
+                    <label htmlFor="resource-title">Title</label>
+                    <input
+                      id="resource-title"
+                      name="title"
+                      type="text"
+                      value={uploadData.title}
+                      onChange={handleUploadChange}
+                      placeholder="Resource title"
+                    />
 
-                  <label htmlFor="resource-file">File</label>
-                  <input id="resource-file" name="file" type="file" onChange={handleUploadChange} />
+                    <label htmlFor="resource-description">Description</label>
+                    <textarea
+                      id="resource-description"
+                      name="description"
+                      value={uploadData.description}
+                      onChange={handleUploadChange}
+                      placeholder="Short resource description"
+                    />
 
-                  {uploadError ? <p className="auth-error">{uploadError}</p> : null}
-                  {uploadLoading ? (
-                    <p className="admin-upload-status">Uploading... {uploadProgress}%</p>
-                  ) : null}
+                    <label htmlFor="resource-category">Course Category</label>
+                    <select
+                      id="resource-category"
+                      name="categoryId"
+                      value={uploadData.categoryId}
+                      onChange={(event) => {
+                        const nextCategoryId = event.target.value
+                        const nextCategory = courseCategories.find((item) => item.id === nextCategoryId)
 
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={!courseCategories.length || uploadLoading}
-                  >
-                    {uploadLoading ? 'Uploading...' : 'Upload Resource'}
-                  </button>
-                </form>
+                        setUploadData((prev) => ({
+                          ...prev,
+                          categoryId: nextCategoryId,
+                          subcategory: nextCategory?.subcategories[0] ?? '',
+                        }))
+                        setUploadError('')
+                      }}
+                      disabled={!courseCategories.length}
+                    >
+                      <option value="">Select category</option>
+                      {courseCategories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <label htmlFor="resource-subcategory">Course Subcategory</label>
+                    <select
+                      id="resource-subcategory"
+                      name="subcategory"
+                      value={uploadData.subcategory}
+                      onChange={handleUploadChange}
+                      disabled={!selectedCourseCategory || !selectedCourseCategory.subcategories.length}
+                    >
+                      <option value="">Select subcategory</option>
+                      {(selectedCourseCategory?.subcategories ?? []).map((subcategoryName) => (
+                        <option key={subcategoryName} value={subcategoryName}>
+                          {subcategoryName}
+                        </option>
+                      ))}
+                    </select>
+
+                    <label htmlFor="resource-file">File</label>
+                    <input id="resource-file" name="file" type="file" onChange={handleUploadChange} />
+
+                    {uploadError ? <p className="auth-error">{uploadError}</p> : null}
+                    {uploadLoading ? (
+                      <p className="admin-upload-status">Uploading... {uploadProgress}%</p>
+                    ) : null}
+
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={!courseCategories.length || uploadLoading}
+                    >
+                      {uploadLoading ? 'Uploading...' : 'Upload Resource'}
+                    </button>
+                  </form>
+                </div>
 
                 <section className="admin-resource-list" aria-label="Uploaded resources">
                   <h3>Uploaded Resources</h3>
@@ -778,7 +780,7 @@ function Admin({
                           </p>
                           <button
                             type="button"
-                            className="btn btn-light"
+                            className="btn btn-light admin-mini-btn is-danger"
                             onClick={() => onDeleteResource(resource.id)}
                           >
                             Delete
@@ -798,148 +800,150 @@ function Admin({
                   <p>Manage quiz categories and keep your question bank updated in one workspace.</p>
                 </div>
 
-                <CategoryManagerSection
-                  title="Manage Quiz Categories"
-                  emptyMessage="No quiz categories yet. Add one to begin managing subcategories."
-                  addPlaceholder="New quiz category"
-                  categoryList={quizCategories}
-                  categoryName={quizCategoryName}
-                  categoryError={quizCategoryError}
-                  subcategoryError={quizSubcategoryError}
-                  editingCategoryId={editingQuizCategoryId}
-                  editingCategoryName={editingQuizCategoryName}
-                  subcategoryInput={quizSubcategoryInput}
-                  onCategoryNameChange={(event) => {
-                    setQuizCategoryName(event.target.value)
-                    setQuizCategoryError('')
-                  }}
-                  onAddCategory={handleAddQuizCategorySubmit}
-                  onStartEdit={startQuizCategoryEdit}
-                  onEditingCategoryNameChange={(event) => setEditingQuizCategoryName(event.target.value)}
-                  onSaveEdit={saveQuizCategoryEdit}
-                  onCancelEdit={cancelQuizCategoryEdit}
-                  onDeleteCategory={removeQuizCategory}
-                  onSubcategoryInputChange={handleQuizSubcategoryInputChange}
-                  onAddSubcategory={addQuizSubcategory}
-                  onDeleteSubcategory={removeQuizSubcategory}
-                />
+                <div className="admin-management-grid">
+                  <CategoryManagerSection
+                    title="Manage Quiz Categories"
+                    emptyMessage="No quiz categories yet. Add one to begin managing subcategories."
+                    addPlaceholder="New quiz category"
+                    categoryList={quizCategories}
+                    categoryName={quizCategoryName}
+                    categoryError={quizCategoryError}
+                    subcategoryError={quizSubcategoryError}
+                    editingCategoryId={editingQuizCategoryId}
+                    editingCategoryName={editingQuizCategoryName}
+                    subcategoryInput={quizSubcategoryInput}
+                    onCategoryNameChange={(event) => {
+                      setQuizCategoryName(event.target.value)
+                      setQuizCategoryError('')
+                    }}
+                    onAddCategory={handleAddQuizCategorySubmit}
+                    onStartEdit={startQuizCategoryEdit}
+                    onEditingCategoryNameChange={(event) => setEditingQuizCategoryName(event.target.value)}
+                    onSaveEdit={saveQuizCategoryEdit}
+                    onCancelEdit={cancelQuizCategoryEdit}
+                    onDeleteCategory={removeQuizCategory}
+                    onSubcategoryInputChange={handleQuizSubcategoryInputChange}
+                    onAddSubcategory={addQuizSubcategory}
+                    onDeleteSubcategory={removeQuizSubcategory}
+                  />
 
-                <section className="admin-quiz-panel" aria-label="Admin quiz manager">
-                  <form className="admin-form" onSubmit={handleAdminQuestionSubmit}>
-                    <h3>Add Quiz Question</h3>
-                    <label htmlFor="admin-question">Question</label>
-                    <textarea
-                      id="admin-question"
-                      name="question"
-                      value={questionData.question}
-                      onChange={handleQuestionFieldChange}
-                      placeholder="Enter quiz question"
-                    />
+                  <section className="admin-quiz-panel" aria-label="Admin quiz manager">
+                    <form className="admin-form" onSubmit={handleAdminQuestionSubmit}>
+                      <h3>Add Quiz Question</h3>
+                      <label htmlFor="admin-question">Question</label>
+                      <textarea
+                        id="admin-question"
+                        name="question"
+                        value={questionData.question}
+                        onChange={handleQuestionFieldChange}
+                        placeholder="Enter quiz question"
+                      />
 
-                    <label htmlFor="admin-question-category">Category</label>
-                    <select
-                      id="admin-question-category"
-                      name="categoryId"
-                      value={questionData.categoryId}
-                      onChange={handleQuestionFieldChange}
-                      disabled={!quizCategories.length}
-                    >
-                      <option value="">Select category</option>
-                      {quizCategories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
+                      <label htmlFor="admin-question-category">Category</label>
+                      <select
+                        id="admin-question-category"
+                        name="categoryId"
+                        value={questionData.categoryId}
+                        onChange={handleQuestionFieldChange}
+                        disabled={!quizCategories.length}
+                      >
+                        <option value="">Select category</option>
+                        {quizCategories.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </select>
 
-                    <label htmlFor="admin-question-subcategory">Subcategory</label>
-                    <select
-                      id="admin-question-subcategory"
-                      name="subcategory"
-                      value={questionData.subcategory}
-                      onChange={handleQuestionFieldChange}
-                      disabled={!selectedQuizCategory || !selectedQuizCategory.subcategories.length}
-                    >
-                      <option value="">Select subcategory</option>
-                      {(selectedQuizCategory?.subcategories ?? []).map((subcategoryName) => (
-                        <option key={subcategoryName} value={subcategoryName}>
-                          {subcategoryName}
-                        </option>
-                      ))}
-                    </select>
+                      <label htmlFor="admin-question-subcategory">Subcategory</label>
+                      <select
+                        id="admin-question-subcategory"
+                        name="subcategory"
+                        value={questionData.subcategory}
+                        onChange={handleQuestionFieldChange}
+                        disabled={!selectedQuizCategory || !selectedQuizCategory.subcategories.length}
+                      >
+                        <option value="">Select subcategory</option>
+                        {(selectedQuizCategory?.subcategories ?? []).map((subcategoryName) => (
+                          <option key={subcategoryName} value={subcategoryName}>
+                            {subcategoryName}
+                          </option>
+                        ))}
+                      </select>
 
-                    <div className="admin-options-grid">
-                      {['A', 'B', 'C', 'D'].map((key) => (
-                        <label key={key} className="admin-option-field" htmlFor={`option-${key}`}>
-                          Option {key}
-                          <input
-                            id={`option-${key}`}
-                            type="text"
-                            value={questionData.options[key]}
-                            onChange={(event) => handleOptionChange(key, event.target.value)}
-                            placeholder={`Enter option ${key}`}
-                          />
-                        </label>
-                      ))}
-                    </div>
-
-                    <label htmlFor="correct-answer">Correct Answer</label>
-                    <select
-                      id="correct-answer"
-                      name="correctAnswer"
-                      value={questionData.correctAnswer}
-                      onChange={handleQuestionFieldChange}
-                    >
-                      <option value="A">A</option>
-                      <option value="B">B</option>
-                      <option value="C">C</option>
-                      <option value="D">D</option>
-                    </select>
-
-                    {questionError ? <p className="auth-error">{questionError}</p> : null}
-                    {adminQuizError ? <p className="auth-error">{adminQuizError}</p> : null}
-                    {adminQuizLoading ? <p>Loading quiz questions...</p> : null}
-
-                    <button
-                      type="submit"
-                      className="btn btn-primary"
-                      disabled={!quizCategories.length || adminQuizLoading}
-                    >
-                      Add Admin Question
-                    </button>
-                  </form>
-
-                  <div className="admin-question-list">
-                    <h3>Existing Questions</h3>
-                    {adminQuizzes.length === 0 ? (
-                      <p>No admin quiz questions yet.</p>
-                    ) : (
-                      <div className="admin-resource-grid">
-                        {adminQuizzes.map((item) => (
-                          <article key={item.id} className="admin-resource-card">
-                            <h3>{item.question}</h3>
-                            <p className="admin-resource-meta">
-                              Category: {item.category} / {item.subcategory ?? 'General'}
-                            </p>
-                            <p>A. {item.options.A}</p>
-                            <p>B. {item.options.B}</p>
-                            <p>C. {item.options.C}</p>
-                            <p>D. {item.options.D}</p>
-                            <p className="admin-resource-meta">Correct: {item.correctAnswer}</p>
-                            <button
-                              type="button"
-                              className="btn btn-light"
-                              disabled={adminQuizLoading}
-                              onClick={() => onDeleteAdminQuestion(item.id)}
-                            >
-                              Delete
-                            </button>
-                          </article>
+                      <div className="admin-options-grid">
+                        {['A', 'B', 'C', 'D'].map((key) => (
+                          <label key={key} className="admin-option-field" htmlFor={`option-${key}`}>
+                            Option {key}
+                            <input
+                              id={`option-${key}`}
+                              type="text"
+                              value={questionData.options[key]}
+                              onChange={(event) => handleOptionChange(key, event.target.value)}
+                              placeholder={`Enter option ${key}`}
+                            />
+                          </label>
                         ))}
                       </div>
-                    )}
-                  </div>
-                </section>
+
+                      <label htmlFor="correct-answer">Correct Answer</label>
+                      <select
+                        id="correct-answer"
+                        name="correctAnswer"
+                        value={questionData.correctAnswer}
+                        onChange={handleQuestionFieldChange}
+                      >
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                      </select>
+
+                      {questionError ? <p className="auth-error">{questionError}</p> : null}
+                      {adminQuizError ? <p className="auth-error">{adminQuizError}</p> : null}
+                      {adminQuizLoading ? <p>Loading quiz questions...</p> : null}
+
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={!quizCategories.length || adminQuizLoading}
+                      >
+                        Add Admin Question
+                      </button>
+                    </form>
+                  </section>
+                </div>
+
+                <div className="admin-question-list">
+                  <h3>Existing Questions</h3>
+                  {adminQuizzes.length === 0 ? (
+                    <p>No admin quiz questions yet.</p>
+                  ) : (
+                    <div className="admin-resource-grid">
+                      {adminQuizzes.map((item) => (
+                        <article key={item.id} className="admin-resource-card">
+                          <h3>{item.question}</h3>
+                          <p className="admin-resource-meta">
+                            Category: {item.category} / {item.subcategory ?? 'General'}
+                          </p>
+                          <p>A. {item.options.A}</p>
+                          <p>B. {item.options.B}</p>
+                          <p>C. {item.options.C}</p>
+                          <p>D. {item.options.D}</p>
+                          <p className="admin-resource-meta">Correct: {item.correctAnswer}</p>
+                          <button
+                            type="button"
+                            className="btn btn-light admin-mini-btn is-danger"
+                            disabled={adminQuizLoading}
+                            onClick={() => onDeleteAdminQuestion(item.id)}
+                          >
+                            Delete
+                          </button>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </section>
             ) : null}
           </div>

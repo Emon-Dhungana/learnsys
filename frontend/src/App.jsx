@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import {
   addDoc,
@@ -38,6 +38,80 @@ const defaultTypingStats = () => ({
     other: { total: 0, errors: 0 },
   },
 })
+
+const normalizeTypingStats = (value) => {
+  const safeValue = value && typeof value === 'object' ? value : {}
+
+  const history = Array.isArray(safeValue.history)
+    ? safeValue.history
+        .filter((item) => item && typeof item === 'object')
+        .map((item, index) => ({
+          id: typeof item.id === 'string' && item.id.trim() ? item.id : `typing-${index + 1}`,
+          timestamp: Number.isFinite(item.timestamp) ? item.timestamp : Date.now(),
+          language: item.language === 'nepali' ? 'nepali' : 'english',
+          durationSeconds: Number(item.durationSeconds) || 0,
+          wpm: Number(item.wpm) || 0,
+          accuracy: Number(item.accuracy) || 0,
+          errorCount: Number(item.errorCount) || 0,
+          totalKeystrokes: Number(item.totalKeystrokes) || 0,
+        }))
+    : []
+
+  const weakKeyCounts =
+    safeValue.weakKeyCounts && typeof safeValue.weakKeyCounts === 'object'
+      ? safeValue.weakKeyCounts
+      : {}
+
+  const incorrectPatterns =
+    safeValue.incorrectPatterns && typeof safeValue.incorrectPatterns === 'object'
+      ? safeValue.incorrectPatterns
+      : {}
+
+  const handStats = safeValue.handStats && typeof safeValue.handStats === 'object' ? safeValue.handStats : {}
+
+  return {
+    history,
+    weakKeyCounts,
+    incorrectPatterns,
+    handStats: {
+      left: {
+        total: Number(handStats?.left?.total) || 0,
+        errors: Number(handStats?.left?.errors) || 0,
+      },
+      right: {
+        total: Number(handStats?.right?.total) || 0,
+        errors: Number(handStats?.right?.errors) || 0,
+      },
+      other: {
+        total: Number(handStats?.other?.total) || 0,
+        errors: Number(handStats?.other?.errors) || 0,
+      },
+    },
+  }
+}
+
+const normalizeCourseProgress = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {}
+  }
+
+  const normalized = {}
+
+  Object.entries(value).forEach(([resourceId, progress]) => {
+    if (!resourceId || !progress || typeof progress !== 'object') {
+      return
+    }
+
+    normalized[resourceId] = {
+      viewed: Boolean(progress.viewed),
+      downloaded: Boolean(progress.downloaded),
+      viewedAt: Number(progress.viewedAt) || null,
+      downloadedAt: Number(progress.downloadedAt) || null,
+    }
+  })
+
+  return normalized
+}
 
 function App() {
   const ADMIN_USERNAME = 'admin'
@@ -175,12 +249,15 @@ function App() {
   const [courseProgressByUsername, setCourseProgressByUsername] = useState(() =>
     readStoredObject(courseProgressStorageKey, {}),
   )
+  const restoredUserStateForRef = useRef(null)
   const [uploadedResources, setUploadedResources] = useState(() =>
     readStoredArray(uploadedResourcesStorageKey),
   )
   const [isAppDataRestored, setIsAppDataRestored] = useState(false)
 
   const navLinks = ['Home', 'Courses', 'Quiz', 'Typing', 'Dashboard']
+
+  const getUserStateDocId = (username) => encodeURIComponent(username.trim().toLowerCase())
 
   useEffect(() => {
     const storedAdmin = localStorage.getItem(adminStorageKey)
@@ -242,6 +319,59 @@ function App() {
   useEffect(() => {
     localStorage.setItem(courseProgressStorageKey, JSON.stringify(courseProgressByUsername))
   }, [courseProgressByUsername])
+
+  useEffect(() => {
+    let isCancelled = false
+    const username = currentUser?.username
+
+    if (!username) {
+      restoredUserStateForRef.current = null
+      return () => {
+        isCancelled = true
+      }
+    }
+
+    const restoreUserState = async () => {
+      try {
+        const snapshot = await getDoc(doc(db, 'user_state', getUserStateDocId(username)))
+
+        if (isCancelled) {
+          return
+        }
+
+        if (!snapshot.exists()) {
+          restoredUserStateForRef.current = username
+          return
+        }
+
+        const data = snapshot.data()
+        const restoredTypingStats = normalizeTypingStats(data?.typingStats)
+        const restoredCourseProgress = normalizeCourseProgress(data?.courseProgress)
+
+        setTypingStatsByUsername((prev) => ({
+          ...prev,
+          [username]: restoredTypingStats,
+        }))
+
+        setCourseProgressByUsername((prev) => ({
+          ...prev,
+          [username]: restoredCourseProgress,
+        }))
+      } catch (error) {
+        console.error('Failed to restore user state from Firestore:', error)
+      } finally {
+        if (!isCancelled) {
+          restoredUserStateForRef.current = username
+        }
+      }
+    }
+
+    restoreUserState()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [currentUser?.username])
 
   useEffect(() => {
     let isCancelled = false
@@ -342,6 +472,30 @@ function App() {
       console.error('Failed to sync resources to Firestore:', error)
     })
   }, [uploadedResources, isAppDataRestored])
+
+  useEffect(() => {
+    const username = currentUser?.username
+    if (!username || restoredUserStateForRef.current !== username) {
+      return
+    }
+
+    const safeTypingStats = normalizeTypingStats(typingStatsByUsername[username] ?? defaultTypingStats())
+    const safeCourseProgress = normalizeCourseProgress(courseProgressByUsername[username] ?? {})
+
+    setDoc(
+      doc(db, 'user_state', getUserStateDocId(username)),
+      {
+        username,
+        usernameLower: username.toLowerCase(),
+        typingStats: safeTypingStats,
+        courseProgress: safeCourseProgress,
+        updatedAt: Date.now(),
+      },
+      { merge: true },
+    ).catch((error) => {
+      console.error('Failed to sync user state to Firestore:', error)
+    })
+  }, [currentUser?.username, typingStatsByUsername, courseProgressByUsername])
 
   const sanitizePreferenceMap = (preferenceMap, nextCategories) => {
     const nextMap = {}
@@ -485,6 +639,7 @@ function App() {
     setCurrentUser(null)
     setIsAdmin(false)
     setIsPreferencesOpen(false)
+    restoredUserStateForRef.current = null
     localStorage.removeItem(userStorageKey)
     localStorage.removeItem(adminStorageKey)
     navigate('/')

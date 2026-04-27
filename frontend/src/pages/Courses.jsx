@@ -94,6 +94,24 @@ function Courses({
     return sourceUrl
   }
 
+  const getViewUrl = (resource) => {
+    const resourceUrl = getResourceUrl(resource)
+    if (!resourceUrl || resourceUrl === '#') {
+      return '#'
+    }
+
+    const isPdf =
+      resource.fileName?.toLowerCase().endsWith('.pdf') ||
+      resourceUrl.toLowerCase().includes('.pdf')
+
+    if (isPdf) {
+      // Some browsers fail to open Cloudinary raw PDFs inline; use a web viewer URL.
+      return `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(resourceUrl)}`
+    }
+
+    return resourceUrl
+  }
+
   return (
     <section className="courses-page" aria-labelledby="courses-heading">
       <header className="courses-hero">
@@ -172,7 +190,7 @@ function Courses({
               <div className="courses-toolbar">
                 <a
                   className="btn btn-primary course-action"
-                  href={getResourceUrl(resource)}
+                  href={getViewUrl(resource)}
                   target="_blank"
                   rel="noreferrer"
                   onClick={() => onResourceView?.(resource.id)}

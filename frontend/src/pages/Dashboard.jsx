@@ -1,6 +1,26 @@
 import { useMemo } from 'react'
 
-function Dashboard({ user, resources, onEditPreferences }) {
+const getTypingRemark = (wpm) => {
+  if (wpm <= 0) {
+    return 'Start typing for checking speed.'
+  }
+
+  if (wpm < 25) {
+    return 'Keep practicing accuracy first, speed will improve.'
+  }
+
+  if (wpm < 40) {
+    return 'Good progress. Try regular timed tests to increase speed.'
+  }
+
+  if (wpm < 55) {
+    return 'Strong typing pace. Focus on consistency to level up.'
+  }
+
+  return 'Excellent speed. Maintain rhythm and reduce small errors.'
+}
+
+function Dashboard({ user, resources, typingStats, courseProgress, onEditPreferences }) {
   const hasPreferences =
     (user?.preferences?.categories?.length ?? 0) > 0 ||
     (user?.preferences?.subcategories?.length ?? 0) > 0
@@ -20,6 +40,53 @@ function Dashboard({ user, resources, onEditPreferences }) {
     })
   }, [hasPreferences, resources, user])
 
+  const englishHistory = useMemo(() => {
+    return (typingStats?.history ?? []).filter((item) => (item.language ?? 'english') === 'english')
+  }, [typingStats])
+
+  const nepaliHistory = useMemo(() => {
+    return (typingStats?.history ?? []).filter((item) => (item.language ?? 'english') === 'nepali')
+  }, [typingStats])
+
+  const latestEnglishWpm = englishHistory.length
+    ? englishHistory[englishHistory.length - 1].wpm
+    : 0
+  const latestNepaliWpm = nepaliHistory.length
+    ? nepaliHistory[nepaliHistory.length - 1].wpm
+    : 0
+
+  const englishRemark = getTypingRemark(latestEnglishWpm)
+  const nepaliRemark = getTypingRemark(latestNepaliWpm)
+
+  const courseProgressItems = useMemo(() => {
+    return resources
+      .map((resource) => {
+        const progress = courseProgress?.[resource.id]
+        if (!progress?.viewed && !progress?.downloaded) {
+          return null
+        }
+
+        let status = 'Viewed'
+        if (progress?.viewed && progress?.downloaded) {
+          status = 'Viewed and Downloaded'
+        } else if (progress?.downloaded) {
+          status = 'Downloaded'
+        }
+
+        return {
+          id: resource.id,
+          title: resource.title,
+          status,
+          lastActionAt: Math.max(progress?.viewedAt ?? 0, progress?.downloadedAt ?? 0),
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.lastActionAt - a.lastActionAt)
+  }, [courseProgress, resources])
+
+  const viewedCount = courseProgressItems.filter((item) => item.status.includes('Viewed')).length
+  const downloadedCount = courseProgressItems.filter((item) => item.status.includes('Downloaded')).length
+
   return (
     <section className="dashboard-page" aria-labelledby="dashboard-heading">
       <header className="dashboard-hero">
@@ -38,7 +105,28 @@ function Dashboard({ user, resources, onEditPreferences }) {
       <div className="dashboard-grid">
         <article className="dashboard-card">
           <h2>Course Progress</h2>
-          <p>6 of 12 modules completed this week.</p>
+          {courseProgressItems.length === 0 ? (
+            <p>No course activity yet. Open a course resource to mark it as viewed.</p>
+          ) : (
+            <>
+              <p>
+                Viewed: {viewedCount} | Downloaded: {downloadedCount}
+              </p>
+              <p>
+                Remark:{' '}
+                {downloadedCount > 0
+                  ? 'Great consistency. You are both viewing and downloading learning materials.'
+                  : 'You are viewing resources. Download important files for offline revision.'}
+              </p>
+              <ul>
+                {courseProgressItems.slice(0, 4).map((item) => (
+                  <li key={item.id}>
+                    {item.title}: {item.status}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </article>
 
         <article className="dashboard-card">
@@ -48,7 +136,10 @@ function Dashboard({ user, resources, onEditPreferences }) {
 
         <article className="dashboard-card">
           <h2>Typing Practice</h2>
-          <p>English: 43 WPM | Nepali: 30 WPM with improving consistency.</p>
+          <p>English: {latestEnglishWpm.toFixed(1)} WPM</p>
+          <p>{englishRemark}</p>
+          <p>Nepali: {latestNepaliWpm.toFixed(1)} WPM</p>
+          <p>{nepaliRemark}</p>
         </article>
       </div>
 

@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react'
 
-function Courses({ resources, courseCategories, userPreferences }) {
+function Courses({
+  resources,
+  courseCategories,
+  userPreferences,
+  resourceProgress,
+  onResourceView,
+  onResourceDownload,
+}) {
   const [showAll, setShowAll] = useState(false)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('all')
 
@@ -51,6 +58,23 @@ function Courses({ resources, courseCategories, userPreferences }) {
     }
 
     return preferredResources.some((item) => item.id === resource.id)
+  }
+
+  const getProgressStatus = (resourceId) => {
+    const progress = resourceProgress?.[resourceId]
+    if (!progress?.viewed && !progress?.downloaded) {
+      return null
+    }
+
+    if (progress?.viewed && progress?.downloaded) {
+      return 'Viewed and Downloaded'
+    }
+
+    if (progress?.downloaded) {
+      return 'Downloaded'
+    }
+
+    return 'Viewed'
   }
 
   return (
@@ -122,15 +146,32 @@ function Courses({ resources, courseCategories, userPreferences }) {
                 <span>Type:</span> {resource.fileType}
               </p>
 
-              <a
-                className="btn btn-primary course-action"
-                href={resource.fileUrl}
-                target="_blank"
-                rel="noreferrer"
-                download={resource.fileName}
-              >
-                View / Download
-              </a>
+              {getProgressStatus(resource.id) ? (
+                <p className="course-file-type">
+                  <span>Status:</span> {getProgressStatus(resource.id)}
+                </p>
+              ) : null}
+
+              <div className="courses-toolbar">
+                <a
+                  className="btn btn-primary course-action"
+                  href={resource.fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => onResourceView?.(resource.id)}
+                >
+                  View
+                </a>
+
+                <a
+                  className="btn btn-light course-action"
+                  href={resource.fileUrl}
+                  download={resource.fileName}
+                  onClick={() => onResourceDownload?.(resource.id)}
+                >
+                  Download
+                </a>
+              </div>
             </article>
           ))}
         </div>

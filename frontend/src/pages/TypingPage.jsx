@@ -20,6 +20,14 @@ const SAMPLE_TEXTS = [
   'Small improvements, tracked over time, become meaningful progress that builds confidence and mastery.',
 ]
 
+const NEPALI_SAMPLE_TEXTS = [
+  'नियमित अभ्यासले टाइपिङ गति र शुद्धता दुवै सुधार्छ।',
+  'दैनिक सानो प्रगति दीर्घकालीन ठूलो उपलब्धिमा बदलिन्छ।',
+  'गल्तीबाट सिकेर फेरि प्रयास गर्नु नै राम्रो रणनीति हो।',
+  'स्पष्ट लक्ष्य, ध्यान, र समीक्षा सफल अध्ययनका आधार हुन्।',
+  'धैर्य राखेर निरन्तर अभ्यास गर्दा आत्मविश्वास बढ्दै जान्छ।',
+]
+
 const LEFT_HAND_KEYS = new Set([
   '1',
   '2',
@@ -62,8 +70,8 @@ const RIGHT_HAND_KEYS = new Set([
   'm',
 ])
 
-const createLongText = () => {
-  const shuffled = [...SAMPLE_TEXTS].sort(() => Math.random() - 0.5)
+const createLongText = (textPool = SAMPLE_TEXTS) => {
+  const shuffled = [...textPool].sort(() => Math.random() - 0.5)
   return `${shuffled.join(' ')} ${shuffled[0]} ${shuffled[1]}`
 }
 
@@ -117,13 +125,16 @@ function TypingPage({
   onSaveTypingResult,
 }) {
   const [activeTab, setActiveTab] = useState(TAB_PRACTICE)
+  const [selectedLanguage, setSelectedLanguage] = useState('english')
 
-  const [practiceText, setPracticeText] = useState(createLongText())
+  const activeTextPool = selectedLanguage === 'nepali' ? NEPALI_SAMPLE_TEXTS : SAMPLE_TEXTS
+
+  const [practiceText, setPracticeText] = useState(() => createLongText(SAMPLE_TEXTS))
   const [practiceInput, setPracticeInput] = useState('')
 
   const [selectedTimerKey, setSelectedTimerKey] = useState('60')
   const [customSeconds, setCustomSeconds] = useState('90')
-  const [testText, setTestText] = useState(createLongText())
+  const [testText, setTestText] = useState(() => createLongText(SAMPLE_TEXTS))
   const [testInput, setTestInput] = useState('')
   const [remainingTime, setRemainingTime] = useState(60)
   const [isTestRunning, setIsTestRunning] = useState(false)
@@ -268,7 +279,7 @@ function TypingPage({
     setTestSummary(null)
     setTestConfigError('')
     metricsRef.current = initialMetrics()
-    setTestText(createLongText())
+    setTestText(createLongText(activeTextPool))
     onUpdateTypingSession(null)
   }
 
@@ -301,6 +312,7 @@ function TypingPage({
     setTestSummary(summary)
     onSaveTypingResult({
       ...summary,
+      language: selectedLanguage,
       weakKeyCounts: metrics.weakKeyCounts,
       incorrectPatterns: metrics.incorrectPatterns,
       handStats: metrics.handStats,
@@ -334,7 +346,7 @@ function TypingPage({
     setRemainingTime(selectedDuration)
     setTestSummary(null)
     setTestConfigError('')
-    setTestText(createLongText())
+    setTestText(createLongText(activeTextPool))
     setIsTestRunning(true)
     isRunningRef.current = true
 
@@ -435,6 +447,30 @@ function TypingPage({
         <p className="typing-tag">Skill Builder</p>
         <h1 id="typing-heading">Typing Practice and Testing</h1>
         <p>Train with guided practice, timed tests, and performance insights.</p>
+        <div className="courses-toolbar">
+          <select
+            className="courses-filter-select"
+            value={selectedLanguage}
+            onChange={(event) => {
+              if (isTestRunning) {
+                return
+              }
+
+              const nextLanguage = event.target.value
+              const nextTextPool = nextLanguage === 'nepali' ? NEPALI_SAMPLE_TEXTS : SAMPLE_TEXTS
+
+              setSelectedLanguage(nextLanguage)
+              setPracticeText(createLongText(nextTextPool))
+              setPracticeInput('')
+              setTestText(createLongText(nextTextPool))
+              setTestInput('')
+              setTestSummary(null)
+            }}
+          >
+            <option value="english">English</option>
+            <option value="nepali">Nepali</option>
+          </select>
+        </div>
       </header>
 
       <div className="typing-tabs" role="tablist" aria-label="Typing tabs">
@@ -464,7 +500,7 @@ function TypingPage({
               type="button"
               className="btn btn-light"
               onClick={() => {
-                setPracticeText(createLongText())
+                setPracticeText(createLongText(activeTextPool))
                 setPracticeInput('')
               }}
             >

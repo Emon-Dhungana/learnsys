@@ -47,6 +47,8 @@ function App() {
   const courseCategoriesStorageKey = 'learnsys_course_categories'
   const quizCategoriesStorageKey = 'learnsys_quiz_categories'
   const uploadedResourcesStorageKey = 'learnsys_uploaded_resources'
+  const typingStatsStorageKey = 'learnsys_typing_stats'
+  const courseProgressStorageKey = 'learnsys_course_progress'
 
   const readStoredUser = () => {
     try {
@@ -68,6 +70,20 @@ function App() {
       return Array.isArray(parsed) ? parsed : []
     } catch {
       return []
+    }
+  }
+
+  const readStoredObject = (key, fallback = {}) => {
+    try {
+      const storedValue = localStorage.getItem(key)
+      if (!storedValue) {
+        return fallback
+      }
+
+      const parsed = JSON.parse(storedValue)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : fallback
+    } catch {
+      return fallback
     }
   }
 
@@ -153,7 +169,12 @@ function App() {
   const [userQuizzes, setUserQuizzes] = useState([])
   const [quizSessionState, setQuizSessionState] = useState(null)
   const [typingSessionState, setTypingSessionState] = useState(null)
-  const [typingStatsByUsername, setTypingStatsByUsername] = useState({})
+  const [typingStatsByUsername, setTypingStatsByUsername] = useState(() =>
+    readStoredObject(typingStatsStorageKey, {}),
+  )
+  const [courseProgressByUsername, setCourseProgressByUsername] = useState(() =>
+    readStoredObject(courseProgressStorageKey, {}),
+  )
   const [uploadedResources, setUploadedResources] = useState(() =>
     readStoredArray(uploadedResourcesStorageKey),
   )
@@ -213,6 +234,14 @@ function App() {
   useEffect(() => {
     localStorage.setItem(uploadedResourcesStorageKey, JSON.stringify(uploadedResources))
   }, [uploadedResources])
+
+  useEffect(() => {
+    localStorage.setItem(typingStatsStorageKey, JSON.stringify(typingStatsByUsername))
+  }, [typingStatsByUsername])
+
+  useEffect(() => {
+    localStorage.setItem(courseProgressStorageKey, JSON.stringify(courseProgressByUsername))
+  }, [courseProgressByUsername])
 
   useEffect(() => {
     let isCancelled = false
@@ -698,6 +727,7 @@ function App() {
         {
           id: crypto.randomUUID(),
           timestamp: Date.now(),
+          language: result.language ?? 'english',
           durationSeconds: result.durationSeconds,
           wpm: result.wpm,
           accuracy: result.accuracy,
@@ -713,6 +743,62 @@ function App() {
           weakKeyCounts: nextWeakKeyCounts,
           incorrectPatterns: nextIncorrectPatterns,
           handStats: nextHandStats,
+        },
+      }
+    })
+  }
+
+  const handleMarkCourseViewed = (resourceId) => {
+    if (!currentUser?.username || !resourceId) {
+      return
+    }
+
+    setCourseProgressByUsername((prev) => {
+      const currentProgress = prev[currentUser.username] ?? {}
+      const currentResourceProgress = currentProgress[resourceId] ?? {
+        viewed: false,
+        downloaded: false,
+        viewedAt: null,
+        downloadedAt: null,
+      }
+
+      return {
+        ...prev,
+        [currentUser.username]: {
+          ...currentProgress,
+          [resourceId]: {
+            ...currentResourceProgress,
+            viewed: true,
+            viewedAt: Date.now(),
+          },
+        },
+      }
+    })
+  }
+
+  const handleMarkCourseDownloaded = (resourceId) => {
+    if (!currentUser?.username || !resourceId) {
+      return
+    }
+
+    setCourseProgressByUsername((prev) => {
+      const currentProgress = prev[currentUser.username] ?? {}
+      const currentResourceProgress = currentProgress[resourceId] ?? {
+        viewed: false,
+        downloaded: false,
+        viewedAt: null,
+        downloadedAt: null,
+      }
+
+      return {
+        ...prev,
+        [currentUser.username]: {
+          ...currentProgress,
+          [resourceId]: {
+            ...currentResourceProgress,
+            downloaded: true,
+            downloadedAt: Date.now(),
+          },
         },
       }
     })
@@ -1057,6 +1143,11 @@ function App() {
                 resources={uploadedResources}
                 courseCategories={courseCategories}
                 userPreferences={currentUser?.preferences}
+                resourceProgress={
+                  currentUser?.username ? courseProgressByUsername[currentUser.username] ?? {} : {}
+                }
+                onResourceView={handleMarkCourseViewed}
+                onResourceDownload={handleMarkCourseDownloaded}
               />
             }
           />
@@ -1146,6 +1237,14 @@ function App() {
                 <Dashboard
                   user={currentUser}
                   resources={uploadedResources}
+                  typingStats={
+                    currentUser
+                      ? typingStatsByUsername[currentUser.username] ?? defaultTypingStats()
+                      : defaultTypingStats()
+                  }
+                  courseProgress={
+                    currentUser?.username ? courseProgressByUsername[currentUser.username] ?? {} : {}
+                  }
                   onEditPreferences={openPreferences}
                 />
               </ProtectedRoute>

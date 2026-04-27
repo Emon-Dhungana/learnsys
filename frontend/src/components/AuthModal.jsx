@@ -30,7 +30,7 @@ function AuthModal({ isOpen, view, onClose, onSwitchView, onLogin, onSignup }) {
     resetError()
   }
 
-  const submitLogin = (event) => {
+  const submitLogin = async (event) => {
     event.preventDefault()
 
     if (!loginData.identifier.trim() || !loginData.password.trim()) {
@@ -38,16 +38,21 @@ function AuthModal({ isOpen, view, onClose, onSwitchView, onLogin, onSignup }) {
       return
     }
 
-    onLogin({
+    const result = await onLogin({
       identifier: loginData.identifier.trim(),
       password: loginData.password,
     })
+
+    if (result?.success === false) {
+      setErrorMessage(result.error || 'Login failed.')
+      return
+    }
 
     setLoginData({ identifier: '', password: '' })
     setErrorMessage('')
   }
 
-  const submitSignup = (event) => {
+  const submitSignup = async (event) => {
     event.preventDefault()
 
     if (!signupData.username.trim() || !signupData.email.trim() || !signupData.password.trim()) {
@@ -55,11 +60,16 @@ function AuthModal({ isOpen, view, onClose, onSwitchView, onLogin, onSignup }) {
       return
     }
 
-    onSignup({
+    const result = await onSignup({
       username: signupData.username.trim(),
       email: signupData.email.trim(),
       password: signupData.password,
     })
+
+    if (result?.success === false) {
+      setErrorMessage(result.error || 'Signup failed.')
+      return
+    }
 
     setSignupData({ username: '', email: '', password: '' })
     setErrorMessage('')

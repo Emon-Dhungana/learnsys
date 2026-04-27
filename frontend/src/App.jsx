@@ -7,6 +7,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   query,
   serverTimestamp,
   setDoc,
@@ -274,37 +275,110 @@ function App() {
     setIsAuthOpen(false)
   }
 
-  const handleLogin = ({ identifier }) => {
-    const username = identifier.includes('@') ? identifier.split('@')[0] : identifier
-    const existingPreferences = sanitizePreferences(userPreferencesByUsername[username] ?? {
-      categories: [],
-      subcategories: [],
-    })
+  const handleLogin = async ({ identifier, password }) => {
+    const normalizedIdentifier = identifier.trim().toLowerCase()
+    const isEmailLogin = normalizedIdentifier.includes('@')
 
-    setCurrentUser({
-      username,
-      preferences: existingPreferences,
-    })
+    try {
+      const userQuery = query(
+        collection(db, 'users'),
+        where(isEmailLogin ? 'emailLower' : 'usernameLower', '==', normalizedIdentifier),
+        limit(1),
+      )
+      const snapshot = await getDocs(userQuery)
 
-    localStorage.setItem(
-      userStorageKey,
-      JSON.stringify({
-        username,
+      if (snapshot.empty) {
+        return {
+          success: false,
+          error: 'No account found with that email/username.',
+        }
+      }
+
+      const userDoc = snapshot.docs[0]
+      const userData = userDoc.data()
+
+      if (userData.password !== password) {
+        return {
+          success: false,
+          error: 'Invalid password.',
+        }
+      }
+
+      const existingPreferences = sanitizePreferences(
+        userPreferencesByUsername[userData.username] ?? {
+          categories: [],
+          subcategories: [],
+        },
+      )
+
+      const nextUser = {
+        username: userData.username,
+        email: userData.email,
         preferences: existingPreferences,
-      }),
-    )
+      }
 
-    setIsAuthOpen(false)
+      setCurrentUser(nextUser)
+      setUserPreferencesByUsername((prev) => ({
+        ...prev,
+        [userData.username]: existingPreferences,
+      }))
+
+      localStorage.setItem(userStorageKey, JSON.stringify(nextUser))
+      setIsAuthOpen(false)
+
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        error: error?.message || 'Failed to login. Please try again.',
+      }
+    }
   }
 
-  const handleSignup = ({ username }) => {
+  const handleSignup = async ({ username, email, password }) => {
+    const normalizedUsername = username.trim()
+    const usernameLower = normalizedUsername.toLowerCase()
+    const normalizedEmail = email.trim()
+    const emailLower = normalizedEmail.toLowerCase()
+
+    try {
+      const duplicateQuery = query(
+        collection(db, 'users'),
+        where('usernameLower', '==', usernameLower),
+        limit(1),
+      )
+      const duplicateSnapshot = await getDocs(duplicateQuery)
+
+      if (!duplicateSnapshot.empty) {
+        return {
+          success: false,
+          error: 'Username already exists. Please choose another username.',
+        }
+      }
+
+      await addDoc(collection(db, 'users'), {
+        username: normalizedUsername,
+        usernameLower,
+        email: normalizedEmail,
+        emailLower,
+        password,
+        createdAt: serverTimestamp(),
+      })
+    } catch (error) {
+      return {
+        success: false,
+        error: error?.message || 'Failed to create account. Please try again.',
+      }
+    }
+
     const defaultPreferences = sanitizePreferences({
       categories: [],
       subcategories: [],
     })
 
     const nextUser = {
-      username,
+      username: normalizedUsername,
+      email: normalizedEmail,
       preferences: defaultPreferences,
     }
 
@@ -312,10 +386,12 @@ function App() {
     localStorage.setItem(userStorageKey, JSON.stringify(nextUser))
     setUserPreferencesByUsername((prev) => ({
       ...prev,
-      [username]: nextUser.preferences,
+      [normalizedUsername]: nextUser.preferences,
     }))
     setIsPreferencesOpen(true)
     setIsAuthOpen(false)
+
+    return { success: true }
   }
 
   const handleLogout = () => {

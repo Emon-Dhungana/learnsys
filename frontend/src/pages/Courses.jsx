@@ -94,22 +94,55 @@ function Courses({
     return sourceUrl
   }
 
-  const getViewUrl = (resource) => {
+  const isPdfResource = (resource) => {
     const resourceUrl = getResourceUrl(resource)
-    if (!resourceUrl || resourceUrl === '#') {
-      return '#'
-    }
-
-    const isPdf =
+    return (
       resource.fileName?.toLowerCase().endsWith('.pdf') ||
       resourceUrl.toLowerCase().includes('.pdf')
+    )
+  }
 
-    if (isPdf) {
-      // Some browsers fail to open Cloudinary raw PDFs inline; use a web viewer URL.
-      return `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(resourceUrl)}`
+  const openPdfInNewTab = async (resourceUrl) => {
+    const previewTab = window.open('', '_blank')
+
+    if (!previewTab) {
+      throw new Error('Popup blocked. Please allow popups for this site.')
     }
 
-    return resourceUrl
+    previewTab.document.write('<p style="font-family: sans-serif; padding: 1rem;">Loading PDF...</p>')
+
+    const response = await fetch(resourceUrl)
+    if (!response.ok) {
+      throw new Error('Unable to fetch PDF preview.')
+    }
+
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    previewTab.location.href = objectUrl
+
+    window.setTimeout(() => {
+      URL.revokeObjectURL(objectUrl)
+    }, 60000)
+  }
+
+  const handleViewResource = async (resource) => {
+    const resourceUrl = getResourceUrl(resource)
+    if (!resourceUrl || resourceUrl === '#') {
+      return
+    }
+
+    onResourceView?.(resource.id)
+
+    try {
+      if (isPdfResource(resource)) {
+        await openPdfInNewTab(resourceUrl)
+        return
+      }
+
+      window.open(resourceUrl, '_blank', 'noopener,noreferrer')
+    } catch {
+      window.open(resourceUrl, '_blank', 'noopener,noreferrer')
+    }
   }
 
   return (
@@ -188,15 +221,15 @@ function Courses({
               ) : null}
 
               <div className="courses-toolbar">
-                <a
+                <button
+                  type="button"
                   className="btn btn-primary course-action"
-                  href={getViewUrl(resource)}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() => onResourceView?.(resource.id)}
+                  onClick={() => {
+                    handleViewResource(resource)
+                  }}
                 >
                   View
-                </a>
+                </button>
 
                 <a
                   className="btn btn-light course-action"

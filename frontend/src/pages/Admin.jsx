@@ -4,9 +4,7 @@ import { uploadToCloudinary } from '../utils/uploadToCloudinary'
 const ADMIN_TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'courseManagement', label: 'Course Management' },
-  { id: 'courseCategories', label: 'Course Categories' },
   { id: 'quizManagement', label: 'Quiz Management' },
-  { id: 'quizCategories', label: 'Quiz Categories' },
 ]
 
 function CategoryManagerSection({
@@ -654,8 +652,34 @@ function Admin({
               <section className="admin-panel" aria-label="Course management section">
                 <div className="admin-panel-head">
                   <h2>Course Management</h2>
-                  <p>Upload new resources and maintain the existing course resource list.</p>
+                  <p>Manage course categories, subcategories, and uploaded resources from one place.</p>
                 </div>
+
+                <CategoryManagerSection
+                  title="Manage Course Categories"
+                  emptyMessage="No course categories yet. Add one to begin managing subcategories."
+                  addPlaceholder="New course category"
+                  categoryList={courseCategories}
+                  categoryName={courseCategoryName}
+                  categoryError={courseCategoryError}
+                  subcategoryError={courseSubcategoryError}
+                  editingCategoryId={editingCourseCategoryId}
+                  editingCategoryName={editingCourseCategoryName}
+                  subcategoryInput={courseSubcategoryInput}
+                  onCategoryNameChange={(event) => {
+                    setCourseCategoryName(event.target.value)
+                    setCourseCategoryError('')
+                  }}
+                  onAddCategory={handleAddCourseCategorySubmit}
+                  onStartEdit={startCourseCategoryEdit}
+                  onEditingCategoryNameChange={(event) => setEditingCourseCategoryName(event.target.value)}
+                  onSaveEdit={saveCourseCategoryEdit}
+                  onCancelEdit={cancelCourseCategoryEdit}
+                  onDeleteCategory={removeCourseCategory}
+                  onSubcategoryInputChange={handleCourseSubcategoryInputChange}
+                  onAddSubcategory={addCourseSubcategory}
+                  onDeleteSubcategory={removeCourseSubcategory}
+                />
 
                 <form className="admin-form" onSubmit={handleUploadSubmit}>
                   <h3>Upload New Course Resource</h3>
@@ -767,47 +791,38 @@ function Admin({
               </section>
             ) : null}
 
-            {activeTab === 'courseCategories' ? (
-              <section className="admin-panel" aria-label="Course category management section">
-                <div className="admin-panel-head">
-                  <h2>Course Category Management</h2>
-                  <p>Add and maintain course categories and subcategories.</p>
-                </div>
-
-                <CategoryManagerSection
-                  title="Manage Course Categories"
-                  emptyMessage="No course categories yet. Add one to begin managing subcategories."
-                  addPlaceholder="New course category"
-                  categoryList={courseCategories}
-                  categoryName={courseCategoryName}
-                  categoryError={courseCategoryError}
-                  subcategoryError={courseSubcategoryError}
-                  editingCategoryId={editingCourseCategoryId}
-                  editingCategoryName={editingCourseCategoryName}
-                  subcategoryInput={courseSubcategoryInput}
-                  onCategoryNameChange={(event) => {
-                    setCourseCategoryName(event.target.value)
-                    setCourseCategoryError('')
-                  }}
-                  onAddCategory={handleAddCourseCategorySubmit}
-                  onStartEdit={startCourseCategoryEdit}
-                  onEditingCategoryNameChange={(event) => setEditingCourseCategoryName(event.target.value)}
-                  onSaveEdit={saveCourseCategoryEdit}
-                  onCancelEdit={cancelCourseCategoryEdit}
-                  onDeleteCategory={removeCourseCategory}
-                  onSubcategoryInputChange={handleCourseSubcategoryInputChange}
-                  onAddSubcategory={addCourseSubcategory}
-                  onDeleteSubcategory={removeCourseSubcategory}
-                />
-              </section>
-            ) : null}
-
             {activeTab === 'quizManagement' ? (
               <section className="admin-panel" aria-label="Quiz management section">
                 <div className="admin-panel-head">
                   <h2>Quiz Management</h2>
-                  <p>Create quiz questions and review your current question bank.</p>
+                  <p>Manage quiz categories and keep your question bank updated in one workspace.</p>
                 </div>
+
+                <CategoryManagerSection
+                  title="Manage Quiz Categories"
+                  emptyMessage="No quiz categories yet. Add one to begin managing subcategories."
+                  addPlaceholder="New quiz category"
+                  categoryList={quizCategories}
+                  categoryName={quizCategoryName}
+                  categoryError={quizCategoryError}
+                  subcategoryError={quizSubcategoryError}
+                  editingCategoryId={editingQuizCategoryId}
+                  editingCategoryName={editingQuizCategoryName}
+                  subcategoryInput={quizSubcategoryInput}
+                  onCategoryNameChange={(event) => {
+                    setQuizCategoryName(event.target.value)
+                    setQuizCategoryError('')
+                  }}
+                  onAddCategory={handleAddQuizCategorySubmit}
+                  onStartEdit={startQuizCategoryEdit}
+                  onEditingCategoryNameChange={(event) => setEditingQuizCategoryName(event.target.value)}
+                  onSaveEdit={saveQuizCategoryEdit}
+                  onCancelEdit={cancelQuizCategoryEdit}
+                  onDeleteCategory={removeQuizCategory}
+                  onSubcategoryInputChange={handleQuizSubcategoryInputChange}
+                  onAddSubcategory={addQuizSubcategory}
+                  onDeleteSubcategory={removeQuizSubcategory}
+                />
 
                 <section className="admin-quiz-panel" aria-label="Admin quiz manager">
                   <form className="admin-form" onSubmit={handleAdminQuestionSubmit}>
@@ -925,41 +940,6 @@ function Admin({
                     )}
                   </div>
                 </section>
-              </section>
-            ) : null}
-
-            {activeTab === 'quizCategories' ? (
-              <section className="admin-panel" aria-label="Quiz category management section">
-                <div className="admin-panel-head">
-                  <h2>Quiz Category Management</h2>
-                  <p>Add and maintain quiz categories and subcategories.</p>
-                </div>
-
-                <CategoryManagerSection
-                  title="Manage Quiz Categories"
-                  emptyMessage="No quiz categories yet. Add one to begin managing subcategories."
-                  addPlaceholder="New quiz category"
-                  categoryList={quizCategories}
-                  categoryName={quizCategoryName}
-                  categoryError={quizCategoryError}
-                  subcategoryError={quizSubcategoryError}
-                  editingCategoryId={editingQuizCategoryId}
-                  editingCategoryName={editingQuizCategoryName}
-                  subcategoryInput={quizSubcategoryInput}
-                  onCategoryNameChange={(event) => {
-                    setQuizCategoryName(event.target.value)
-                    setQuizCategoryError('')
-                  }}
-                  onAddCategory={handleAddQuizCategorySubmit}
-                  onStartEdit={startQuizCategoryEdit}
-                  onEditingCategoryNameChange={(event) => setEditingQuizCategoryName(event.target.value)}
-                  onSaveEdit={saveQuizCategoryEdit}
-                  onCancelEdit={cancelQuizCategoryEdit}
-                  onDeleteCategory={removeQuizCategory}
-                  onSubcategoryInputChange={handleQuizSubcategoryInputChange}
-                  onAddSubcategory={addQuizSubcategory}
-                  onDeleteSubcategory={removeQuizSubcategory}
-                />
               </section>
             ) : null}
           </div>

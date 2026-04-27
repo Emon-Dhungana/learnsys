@@ -71,12 +71,60 @@ function App() {
     }
   }
 
+  const normalizeCategoryList = (value, prefix) => {
+    if (!Array.isArray(value)) {
+      return []
+    }
+
+    return value
+      .map((item, index) => {
+        // Backward compatibility: older builds stored category names as strings.
+        if (typeof item === 'string') {
+          const trimmedName = item.trim()
+          if (!trimmedName) {
+            return null
+          }
+
+          return {
+            id: `${prefix}-${index + 1}`,
+            name: trimmedName,
+            subcategories: [],
+          }
+        }
+
+        if (!item || typeof item !== 'object') {
+          return null
+        }
+
+        const trimmedName = typeof item.name === 'string' ? item.name.trim() : ''
+        if (!trimmedName) {
+          return null
+        }
+
+        const subcategories = Array.isArray(item.subcategories)
+          ? item.subcategories
+              .filter((subcat) => typeof subcat === 'string' && subcat.trim())
+              .map((subcat) => subcat.trim())
+          : []
+
+        return {
+          id:
+            typeof item.id === 'string' && item.id.trim()
+              ? item.id
+              : `${prefix}-${index + 1}`,
+          name: trimmedName,
+          subcategories,
+        }
+      })
+      .filter(Boolean)
+  }
+
   const navigate = useNavigate()
   const [courseCategories, setCourseCategories] = useState(() =>
-    readStoredArray(courseCategoriesStorageKey),
+    normalizeCategoryList(readStoredArray(courseCategoriesStorageKey), 'course'),
   )
   const [quizCategories, setQuizCategories] = useState(() =>
-    readStoredArray(quizCategoriesStorageKey),
+    normalizeCategoryList(readStoredArray(quizCategoriesStorageKey), 'quiz'),
   )
   const [currentUser, setCurrentUser] = useState(() => readStoredUser())
   const [userPreferencesByUsername, setUserPreferencesByUsername] = useState(() => {
@@ -182,17 +230,21 @@ function App() {
         }
 
         if (courseCategoriesDoc.exists()) {
-          const firestoreCourseCategories = courseCategoriesDoc.data()?.items
-          if (Array.isArray(firestoreCourseCategories)) {
-            setCourseCategories(firestoreCourseCategories)
-          }
+          const courseData = courseCategoriesDoc.data()
+          const firestoreCourseCategories = normalizeCategoryList(
+            courseData?.items ?? courseData?.categories,
+            'course',
+          )
+          setCourseCategories(firestoreCourseCategories)
         }
 
         if (quizCategoriesDoc.exists()) {
-          const firestoreQuizCategories = quizCategoriesDoc.data()?.items
-          if (Array.isArray(firestoreQuizCategories)) {
-            setQuizCategories(firestoreQuizCategories)
-          }
+          const quizData = quizCategoriesDoc.data()
+          const firestoreQuizCategories = normalizeCategoryList(
+            quizData?.items ?? quizData?.categories,
+            'quiz',
+          )
+          setQuizCategories(firestoreQuizCategories)
         }
 
         if (resourcesDoc.exists()) {
@@ -222,8 +274,11 @@ function App() {
       return
     }
 
+    const normalizedCourseCategories = normalizeCategoryList(courseCategories, 'course')
+
     setDoc(doc(db, 'app_state', 'course_categories'), {
-      items: courseCategories,
+      items: normalizedCourseCategories,
+      categories: normalizedCourseCategories,
       updatedAt: Date.now(),
     }).catch((error) => {
       console.error('Failed to sync course categories to Firestore:', error)
@@ -235,8 +290,11 @@ function App() {
       return
     }
 
+    const normalizedQuizCategories = normalizeCategoryList(quizCategories, 'quiz')
+
     setDoc(doc(db, 'app_state', 'quiz_categories'), {
-      items: quizCategories,
+      items: normalizedQuizCategories,
+      categories: normalizedQuizCategories,
       updatedAt: Date.now(),
     }).catch((error) => {
       console.error('Failed to sync quiz categories to Firestore:', error)

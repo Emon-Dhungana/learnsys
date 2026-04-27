@@ -1,4 +1,4 @@
-function Navbar({ links, user, onOpenAuth, onLogout, onNavClick }) {
+function Navbar({ links, user, isAdmin, onOpenAuth, onLogout, onNavClick }) {
   const handleNavItemClick = (event, link) => {
     event.preventDefault()
     onNavClick(link)
@@ -33,6 +33,13 @@ function Navbar({ links, user, onOpenAuth, onLogout, onNavClick }) {
           {user ? (
             <>
               <p className="welcome-user">Welcome, {user.username}</p>
+              <button type="button" className="btn btn-light" onClick={onLogout}>
+                Logout
+              </button>
+            </>
+          ) : isAdmin ? (
+            <>
+              <p className="welcome-user">Admin mode</p>
               <button type="button" className="btn btn-light" onClick={onLogout}>
                 Logout
               </button>

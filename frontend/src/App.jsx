@@ -1425,6 +1425,7 @@ function App() {
       <Navbar
         links={navLinks}
         user={currentUser}
+        isAdmin={isAdmin}
         onOpenAuth={openAuth}
         onLogout={handleLogout}
         onNavClick={handleNavClick}

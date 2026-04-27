@@ -27,6 +27,7 @@ const shuffle = (items) => {
 
 function QuizPage({
   user,
+  isAdmin,
   quizCategories,
   adminQuizzes,
   adminQuizLoading,
@@ -78,7 +79,7 @@ function QuizPage({
   }
 
   const startAdminQuiz = () => {
-    if (!user) {
+    if (!user && !isAdmin) {
       onRequireAuth()
       return
     }
@@ -153,7 +154,7 @@ function QuizPage({
   }
 
   const saveCreateQuiz = () => {
-    if (!user) {
+    if (!user && !isAdmin) {
       onRequireAuth()
       return
     }
@@ -187,7 +188,7 @@ function QuizPage({
   }
 
   const beginEditQuiz = (quiz) => {
-    if (!user) {
+    if (!user && !isAdmin) {
       onRequireAuth()
       return
     }
@@ -207,7 +208,7 @@ function QuizPage({
   }
 
   const startUserQuiz = (quiz) => {
-    if (!user) {
+    if (!user && !isAdmin) {
       onRequireAuth()
       return
     }

@@ -118,6 +118,7 @@ const formatTime = (seconds) => {
 
 function TypingPage({
   user,
+  isAdmin,
   typingStats,
   typingSessionState,
   onRequireAuth,
@@ -480,7 +481,7 @@ function TypingPage({
             type="button"
             className={`typing-tab ${activeTab === tab ? 'is-active' : ''}`}
             onClick={() => {
-              if (!user && tab !== TAB_PRACTICE) {
+              if (!user && !isAdmin && tab !== TAB_PRACTICE) {
                 onRequireAuth()
                 return
               }
@@ -523,7 +524,7 @@ function TypingPage({
 
       {activeTab === TAB_TEST ? (
         <section className="typing-panel typing-glass" aria-label="Test mode">
-          {!user ? (
+          {!user && !isAdmin ? (
             <div className="empty-courses">
               <h2>Login Required</h2>
               <p>Please login to use Test Mode.</p>
@@ -685,7 +686,7 @@ function TypingPage({
 
       {activeTab === TAB_STATS ? (
         <section className="typing-panel typing-glass" aria-label="Statistics">
-          {!user ? (
+          {!user && !isAdmin ? (
             <div className="empty-courses">
               <h2>Login Required</h2>
               <p>Please login to view your typing statistics.</p>

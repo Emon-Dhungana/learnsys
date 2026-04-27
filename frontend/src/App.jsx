@@ -1497,6 +1497,7 @@ function App() {
             element={
               <QuizPage
                 user={currentUser}
+                isAdmin={isAdmin}
                 quizCategories={quizCategories}
                 adminQuizzes={adminQuizzes}
                   adminQuizLoading={adminQuizLoading}
@@ -1521,6 +1522,7 @@ function App() {
               >
                 <TypingPage
                   user={currentUser}
+                  isAdmin={isAdmin}
                   typingSessionState={typingSessionState}
                   typingStats={
                     currentUser
@@ -1538,12 +1540,13 @@ function App() {
             path="/dashboard"
             element={
               <ProtectedRoute
-                isAllowed={Boolean(currentUser)}
+                isAllowed={Boolean(currentUser) || isAdmin}
                 onUnauthorized={() => openAuth('login')}
                 redirectPath="/"
               >
                 <Dashboard
                   user={currentUser}
+                  isAdmin={isAdmin}
                   resources={uploadedResources}
                   typingStats={
                     currentUser

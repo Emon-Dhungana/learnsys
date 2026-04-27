@@ -1,25 +1,11 @@
 import { Link } from 'react-router-dom'
-import { addDoc, collection } from 'firebase/firestore'
 import HeroSection from '../components/home/HeroSection'
 import InfoSection from '../components/home/InfoSection'
 import FeatureCard from '../components/home/FeatureCard'
 import ScrollToTopButton from '../components/ScrollToTopButton'
 import Footer from '../components/Footer'
-import { db } from '../firebase'
 
 function Home({ onOpenAdminAuth }) {
-  const handleFirestoreTest = async () => {
-    try {
-      const docRef = await addDoc(collection(db, 'test'), {
-        message: 'Hello Firestore',
-      })
-
-      console.log('Firestore test write succeeded. Document ID:', docRef.id)
-    } catch (error) {
-      console.error('Firestore test write failed:', error)
-    }
-  }
-
   const moduleItems = [
     {
       icon: 'LS',
@@ -192,9 +178,6 @@ function Home({ onOpenAdminAuth }) {
             <Link to="/dashboard" className="btn btn-light btn-large">
               View Dashboard
             </Link>
-            <button type="button" className="btn btn-light btn-large" onClick={handleFirestoreTest}>
-              Test Firestore
-            </button>
           </div>
         </div>
       </section>

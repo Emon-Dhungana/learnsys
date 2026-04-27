@@ -21,6 +21,10 @@ const getTypingRemark = (wpm) => {
 }
 
 function Dashboard({ user, resources, typingStats, courseProgress, onEditPreferences }) {
+  const memberSinceText = user?.createdAtMs
+    ? `Member since: ${new Date(user.createdAtMs).toLocaleDateString()}`
+    : 'Member since: Unavailable'
+
   const hasPreferences =
     (user?.preferences?.categories?.length ?? 0) > 0 ||
     (user?.preferences?.subcategories?.length ?? 0) > 0
@@ -96,6 +100,7 @@ function Dashboard({ user, resources, typingStats, courseProgress, onEditPrefere
           Welcome back, {user?.username}. Review your current progress, quiz readiness,
           and typing momentum from one focused place.
         </p>
+        <p className="dashboard-member-since">{memberSinceText}</p>
 
         <button type="button" className="btn btn-light" onClick={onEditPreferences}>
           Edit Preferences

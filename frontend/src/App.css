@@ -729,6 +729,13 @@ main {
   max-width: 62ch;
 }
 
+.dashboard-member-since {
+  margin-top: 0.3rem;
+  color: var(--blue-700);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

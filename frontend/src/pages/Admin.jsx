@@ -145,6 +145,9 @@ function Admin({
   adminQuizzes,
   adminQuizLoading,
   adminQuizError,
+  adminUsers,
+  adminUsersLoading,
+  adminUsersError,
   resources,
   onAddCourseCategory,
   onRenameCourseCategory,
@@ -159,6 +162,8 @@ function Admin({
   onAddAdminQuestion,
   onDeleteAdminQuestion,
   onLoadAdminQuizzes,
+  onLoadAdminUsers,
+  onDeleteRegisteredUser,
   onUploadResource,
   onDeleteResource,
   onAdminLogout,
@@ -211,10 +216,32 @@ function Admin({
   ).size
   const totalResources = resources.length
   const totalQuizQuestions = adminQuizzes.length
+  const totalRegisteredUsers = adminUsers.length
 
   useEffect(() => {
     onLoadAdminQuizzes()
-  }, [onLoadAdminQuizzes])
+    onLoadAdminUsers()
+  }, [onLoadAdminQuizzes, onLoadAdminUsers])
+
+  const formatMemberSince = (createdAtMs) => {
+    if (!createdAtMs) {
+      return 'Unavailable'
+    }
+
+    return new Date(createdAtMs).toLocaleDateString()
+  }
+
+  const handleDeleteUser = (userItem) => {
+    const confirmed = window.confirm(
+      `Delete user "${userItem.username}"? This will remove their account and saved dashboard progress.`,
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    onDeleteRegisteredUser(userItem.id, userItem.username)
+  }
 
   const isDuplicateCategoryName = (categoryList, name, ignoreId = null) => {
     return categoryList.some(
@@ -633,6 +660,10 @@ function Admin({
                     <h3>Total Quiz Questions</h3>
                     <p>{totalQuizQuestions}</p>
                   </article>
+                  <article className="admin-stat-card">
+                    <h3>Registered Users</h3>
+                    <p>{totalRegisteredUsers}</p>
+                  </article>
                 </div>
 
                 <div className="admin-overview-grid">
@@ -645,6 +676,35 @@ function Admin({
                     <p>Maintain a balanced quiz bank across quiz categories and subcategories.</p>
                   </article>
                 </div>
+
+                <section className="admin-resource-list" aria-label="Registered users list">
+                  <h3>Registered Users</h3>
+                  {adminUsersError ? <p className="auth-error">{adminUsersError}</p> : null}
+                  {adminUsersLoading ? <p>Loading registered users...</p> : null}
+
+                  {!adminUsersLoading && adminUsers.length === 0 ? (
+                    <p>No users registered yet.</p>
+                  ) : (
+                    <div className="admin-resource-grid">
+                      {adminUsers.map((userItem) => (
+                        <article key={userItem.id} className="admin-resource-card">
+                          <h3>{userItem.username}</h3>
+                          <p className="admin-resource-meta">Email: {userItem.email || 'N/A'}</p>
+                          <p className="admin-resource-meta">
+                            Member Since: {formatMemberSince(userItem.createdAtMs)}
+                          </p>
+                          <button
+                            type="button"
+                            className="btn btn-light admin-mini-btn is-danger"
+                            onClick={() => handleDeleteUser(userItem)}
+                          >
+                            Delete User
+                          </button>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </section>
               </section>
             ) : null}
 

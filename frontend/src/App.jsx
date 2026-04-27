@@ -113,6 +113,22 @@ const normalizeCourseProgress = (value) => {
   return normalized
 }
 
+const getCreatedAtMs = (value) => {
+  if (Number.isFinite(value)) {
+    return value
+  }
+
+  if (value && typeof value.toMillis === 'function') {
+    return value.toMillis()
+  }
+
+  if (value && Number.isFinite(value.seconds)) {
+    return value.seconds * 1000
+  }
+
+  return null
+}
+
 function App() {
   const ADMIN_USERNAME = 'admin'
   const ADMIN_PASSWORD = 'admin123'
@@ -240,6 +256,9 @@ function App() {
   const [adminQuizzes, setAdminQuizzes] = useState([])
   const [adminQuizLoading, setAdminQuizLoading] = useState(false)
   const [adminQuizError, setAdminQuizError] = useState('')
+  const [adminUsers, setAdminUsers] = useState([])
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false)
+  const [adminUsersError, setAdminUsersError] = useState('')
   const [userQuizzes, setUserQuizzes] = useState([])
   const [quizSessionState, setQuizSessionState] = useState(null)
   const [typingSessionState, setTypingSessionState] = useState(null)
@@ -555,6 +574,7 @@ function App() {
       const nextUser = {
         username: userData.username,
         email: userData.email,
+        createdAtMs: getCreatedAtMs(userData.createdAtMs ?? userData.createdAt),
         preferences: existingPreferences,
       }
 
@@ -582,6 +602,8 @@ function App() {
     const normalizedEmail = email.trim()
     const emailLower = normalizedEmail.toLowerCase()
 
+    const createdAtMs = Date.now()
+
     try {
       const duplicateQuery = query(
         collection(db, 'users'),
@@ -603,6 +625,7 @@ function App() {
         email: normalizedEmail,
         emailLower,
         password,
+        createdAtMs,
         createdAt: serverTimestamp(),
       })
     } catch (error) {
@@ -620,6 +643,7 @@ function App() {
     const nextUser = {
       username: normalizedUsername,
       email: normalizedEmail,
+      createdAtMs,
       preferences: defaultPreferences,
     }
 
@@ -672,7 +696,7 @@ function App() {
     setAdminAuthError('')
     setIsAdminAuthOpen(false)
     localStorage.setItem(adminStorageKey, 'true')
-    await loadAdminQuizzes()
+    await Promise.all([loadAdminQuizzes(), loadAdminUsers()])
     navigate('/admin')
   }
 
@@ -778,6 +802,124 @@ function App() {
       setAdminQuizLoading(false)
     }
   }, [])
+
+  const loadAdminUsers = useCallback(async () => {
+    setAdminUsersLoading(true)
+    setAdminUsersError('')
+
+    try {
+      const snapshot = await getDocs(collection(db, 'users'))
+      const users = snapshot.docs
+        .map((userDoc) => {
+          const data = userDoc.data()
+          return {
+            id: userDoc.id,
+            username: data.username ?? 'Unknown',
+            email: data.email ?? '',
+            createdAtMs: getCreatedAtMs(data.createdAtMs ?? data.createdAt),
+          }
+        })
+        .sort((a, b) => (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0))
+
+      setAdminUsers(users)
+    } catch (error) {
+      setAdminUsersError(error?.message || 'Failed to fetch registered users from Firestore.')
+    } finally {
+      setAdminUsersLoading(false)
+    }
+  }, [])
+
+  const handleDeleteRegisteredUser = async (userId, username) => {
+    if (!userId || !username) {
+      return
+    }
+
+    setAdminUsersError('')
+
+    try {
+      await deleteDoc(doc(db, 'users', userId))
+
+      await deleteDoc(doc(db, 'user_state', getUserStateDocId(username))).catch(() => {})
+
+      setTypingStatsByUsername((prev) => {
+        const next = { ...prev }
+        delete next[username]
+        return next
+      })
+
+      setCourseProgressByUsername((prev) => {
+        const next = { ...prev }
+        delete next[username]
+        return next
+      })
+
+      setUserPreferencesByUsername((prev) => {
+        const next = { ...prev }
+        delete next[username]
+        return next
+      })
+
+      if (currentUser?.username === username) {
+        setCurrentUser(null)
+        setIsPreferencesOpen(false)
+        restoredUserStateForRef.current = null
+        localStorage.removeItem(userStorageKey)
+        navigate('/')
+      }
+
+      await loadAdminUsers()
+    } catch (error) {
+      setAdminUsersError(error?.message || 'Failed to delete user account.')
+    }
+  }
+
+  useEffect(() => {
+    const username = currentUser?.username
+    if (!username || currentUser?.createdAtMs) {
+      return
+    }
+
+    let isCancelled = false
+
+    const loadMemberSince = async () => {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'users'), where('usernameLower', '==', username.toLowerCase()), limit(1)),
+        )
+
+        if (isCancelled || snapshot.empty) {
+          return
+        }
+
+        const data = snapshot.docs[0].data()
+        const createdAtMs = getCreatedAtMs(data.createdAtMs ?? data.createdAt)
+        if (!createdAtMs) {
+          return
+        }
+
+        setCurrentUser((prev) => {
+          if (!prev || prev.username !== username) {
+            return prev
+          }
+
+          const nextUser = {
+            ...prev,
+            createdAtMs,
+          }
+          localStorage.setItem(userStorageKey, JSON.stringify(nextUser))
+          return nextUser
+        })
+      } catch {
+        // Non-blocking enhancement for legacy sessions without createdAt.
+      }
+    }
+
+    loadMemberSince()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [currentUser?.username, currentUser?.createdAtMs])
 
   const handleAddAdminQuestion = async (questionInput) => {
     setAdminQuizError('')
@@ -1317,6 +1459,9 @@ function App() {
                     adminQuizzes={adminQuizzes}
                     adminQuizLoading={adminQuizLoading}
                     adminQuizError={adminQuizError}
+                    adminUsers={adminUsers}
+                    adminUsersLoading={adminUsersLoading}
+                    adminUsersError={adminUsersError}
                     resources={uploadedResources}
                     onAddCourseCategory={handleAddCourseCategory}
                     onRenameCourseCategory={handleRenameCourseCategory}
@@ -1331,6 +1476,8 @@ function App() {
                     onAddAdminQuestion={handleAddAdminQuestion}
                     onDeleteAdminQuestion={handleDeleteAdminQuestion}
                     onLoadAdminQuizzes={loadAdminQuizzes}
+                    onLoadAdminUsers={loadAdminUsers}
+                    onDeleteRegisteredUser={handleDeleteRegisteredUser}
                     onUploadResource={handleUploadResource}
                     onDeleteResource={handleDeleteResource}
                     onAdminLogout={handleAdminLogout}

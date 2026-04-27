@@ -208,6 +208,7 @@ function Admin({
   const [uploadError, setUploadError] = useState('')
   const [uploadLoading, setUploadLoading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadFileInputKey, setUploadFileInputKey] = useState(0)
 
   const selectedCourseCategory = courseCategories.find((item) => item.id === uploadData.categoryId)
   const selectedQuizCategory = quizCategories.find((item) => item.id === questionData.categoryId)
@@ -586,6 +587,7 @@ function Admin({
         subcategory: '',
         file: null,
       })
+      setUploadFileInputKey((prev) => prev + 1)
       setUploadError('')
       setUploadProgress(0)
     } catch (error) {
@@ -806,7 +808,13 @@ function Admin({
                     </select>
 
                     <label htmlFor="resource-file">File</label>
-                    <input id="resource-file" name="file" type="file" onChange={handleUploadChange} />
+                    <input
+                      key={uploadFileInputKey}
+                      id="resource-file"
+                      name="file"
+                      type="file"
+                      onChange={handleUploadChange}
+                    />
 
                     {uploadError ? <p className="auth-error">{uploadError}</p> : null}
                     {uploadLoading ? (

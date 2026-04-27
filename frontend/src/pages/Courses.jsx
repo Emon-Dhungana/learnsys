@@ -111,18 +111,30 @@ function Courses({
 
     previewTab.document.write('<p style="font-family: sans-serif; padding: 1rem;">Loading PDF...</p>')
 
-    const response = await fetch(resourceUrl)
-    if (!response.ok) {
-      throw new Error('Unable to fetch PDF preview.')
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => {
+      controller.abort()
+    }, 12000)
+
+    try {
+      const response = await fetch(resourceUrl, { signal: controller.signal })
+      if (!response.ok) {
+        throw new Error('Unable to fetch PDF preview.')
+      }
+
+      const blob = await response.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      previewTab.location.replace(objectUrl)
+
+      window.setTimeout(() => {
+        URL.revokeObjectURL(objectUrl)
+      }, 60000)
+    } catch {
+      // Important: reuse the same already-opened tab to avoid popup blockers.
+      previewTab.location.replace(resourceUrl)
+    } finally {
+      window.clearTimeout(timeoutId)
     }
-
-    const blob = await response.blob()
-    const objectUrl = URL.createObjectURL(blob)
-    previewTab.location.href = objectUrl
-
-    window.setTimeout(() => {
-      URL.revokeObjectURL(objectUrl)
-    }, 60000)
   }
 
   const handleViewResource = async (resource) => {
@@ -133,16 +145,12 @@ function Courses({
 
     onResourceView?.(resource.id)
 
-    try {
-      if (isPdfResource(resource)) {
-        await openPdfInNewTab(resourceUrl)
-        return
-      }
-
-      window.open(resourceUrl, '_blank', 'noopener,noreferrer')
-    } catch {
-      window.open(resourceUrl, '_blank', 'noopener,noreferrer')
+    if (isPdfResource(resource)) {
+      await openPdfInNewTab(resourceUrl)
+      return
     }
+
+    window.open(resourceUrl, '_blank', 'noopener,noreferrer')
   }
 
   return (

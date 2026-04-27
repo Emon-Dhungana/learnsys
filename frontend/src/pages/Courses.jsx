@@ -77,6 +77,23 @@ function Courses({
     return 'Viewed'
   }
 
+  const getResourceUrl = (resource) => {
+    const sourceUrl = resource.fileUrl
+    if (!sourceUrl) {
+      return '#'
+    }
+
+    const looksLikePdf =
+      resource.fileName?.toLowerCase().endsWith('.pdf') ||
+      sourceUrl.toLowerCase().includes('.pdf')
+
+    if (looksLikePdf && sourceUrl.includes('/image/upload/')) {
+      return sourceUrl.replace('/image/upload/', '/raw/upload/')
+    }
+
+    return sourceUrl
+  }
+
   return (
     <section className="courses-page" aria-labelledby="courses-heading">
       <header className="courses-hero">
@@ -155,7 +172,7 @@ function Courses({
               <div className="courses-toolbar">
                 <a
                   className="btn btn-primary course-action"
-                  href={resource.fileUrl}
+                  href={getResourceUrl(resource)}
                   target="_blank"
                   rel="noreferrer"
                   onClick={() => onResourceView?.(resource.id)}
@@ -165,7 +182,7 @@ function Courses({
 
                 <a
                   className="btn btn-light course-action"
-                  href={resource.fileUrl}
+                  href={getResourceUrl(resource)}
                   download={resource.fileName}
                   onClick={() => onResourceDownload?.(resource.id)}
                 >

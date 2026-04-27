@@ -2,7 +2,12 @@ export const uploadToCloudinary = async (file, onProgress = () => {}) => {
   try {
     if (!file) throw new Error("No file provided");
 
-    const url = "https://api.cloudinary.com/v1_1/dm6wsncor/upload";
+    const isPdf =
+      file.type === "application/pdf" ||
+      file.name.toLowerCase().endsWith(".pdf");
+
+    const endpointType = isPdf ? "raw" : "auto";
+    const url = `https://api.cloudinary.com/v1_1/dm6wsncor/${endpointType}/upload`;
 
     const formData = new FormData();
     formData.append("file", file);

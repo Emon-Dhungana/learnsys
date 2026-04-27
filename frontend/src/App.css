@@ -997,6 +997,65 @@ main {
   font-size: 0.9rem;
 }
 
+/* --- Admin: Compact, Sleek Course & Quiz Management UI --- */
+.admin-panel {
+  --admin-gap: 0.75rem;
+}
+.admin-panel .admin-surface {
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, #fff, #fbfdff);
+}
+.admin-panel .admin-surface-head h3 { margin: 0; font-size: 1.02rem; }
+.admin-panel .admin-surface-head p { margin: 0; color: var(--ink-600); font-size: 0.88rem; }
+
+.management-grid, .admin-workflow-grid, .management-modern { display: grid; grid-template-columns: 300px 1fr; gap: var(--admin-gap); align-items: start; }
+.admin-panel .left-pane, .admin-panel .admin-category-panel { padding: 0.6rem; }
+.admin-panel .category-list { display:flex; flex-direction:column; gap:0.5rem; max-height:56vh; overflow:auto; }
+.category-list-item { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; padding:0.5rem; border-radius:10px; }
+.category-list-item:hover { background: rgba(240,246,255,0.6); }
+.category-list-item strong { display:block; max-width:140px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:0.98rem; }
+.category-list-item .subcount { color:var(--ink-600); font-size:0.82rem; }
+
+.category-actions .btn { padding:0.34rem 0.5rem; font-size:0.82rem; }
+.category-create { display:flex; gap:0.45rem; align-items:center; margin-top:0.6rem; }
+.category-create input { padding:0.5rem; border-radius:8px; border:1px solid var(--line-soft); font-size:0.95rem; }
+
+.admin-panel .upload-card { padding:0.7rem; }
+.upload-form .form-row { display:flex; gap:0.5rem; align-items:center; }
+.upload-form input[type="text"], .upload-form select, .upload-form textarea { padding:0.48rem; border-radius:8px; font-size:0.95rem; }
+.upload-form textarea { min-height:68px; }
+.actions-right .btn { padding:0.4rem 0.6rem; }
+
+.resources-grid, .admin-resource-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:0.6rem; }
+.resource-card-modern, .admin-resource-card { padding:0.68rem; border-radius:10px; box-shadow:0 6px 14px rgba(20,50,90,0.04); }
+.resource-card-modern h4, .admin-resource-card h3 { margin:0; font-size:0.98rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.resource-tags { color:var(--ink-600); font-size:0.85rem; }
+.resource-actions { display:flex; gap:0.45rem; }
+
+.question-card-modern { padding:0.68rem; }
+.question-head h4 { margin:0; font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.question-meta { color:var(--ink-600); font-size:0.85rem; }
+.question-body { font-size:0.92rem; color:var(--ink-700); }
+.question-footer { display:flex; justify-content:space-between; align-items:center; gap:0.5rem; }
+
+/* Buttons compact */
+.admin-panel .admin-mini-btn { padding:0.34rem 0.5rem; font-size:0.86rem; border-radius:10px; }
+.admin-panel .btn-light { padding:0.36rem 0.6rem; font-size:0.9rem; }
+.admin-panel .btn-primary { padding:0.42rem 0.7rem; font-size:0.92rem; }
+
+/* KPI chips */
+.admin-surface-kpis { display:flex; gap:0.5rem; flex-wrap:wrap; }
+.admin-kpi-chip { font-size:0.82rem; padding:0.28rem 0.5rem; border-radius:999px; background:linear-gradient(180deg,#f7fbff,#eef6ff); color:var(--blue-700); }
+
+@media (max-width: 980px) {
+  .management-grid, .admin-workflow-grid, .management-modern { grid-template-columns: 1fr; }
+  .category-list { max-height: 40vh; }
+}
+
+/* end admin compact styles */
+
 .create-question-list {
   margin-top: 0.25rem;
   display: grid;

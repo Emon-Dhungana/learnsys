@@ -718,7 +718,7 @@ function App() {
     }
 
     if (link === 'Quiz') {
-      if (!currentUser) {
+      if (!currentUser && !isAdmin) {
         openAuth('login')
         return
       }
@@ -728,12 +728,17 @@ function App() {
     }
 
     if (link === 'Typing') {
-      if (!currentUser) {
+      if (!currentUser && !isAdmin) {
         openAuth('login')
         return
       }
 
       navigate('/typing')
+      return
+    }
+
+    if (link === 'Dashboard' && isAdmin) {
+      navigate('/admin')
       return
     }
 
@@ -1510,7 +1515,7 @@ function App() {
             path="/typing"
             element={
               <ProtectedRoute
-                isAllowed={Boolean(currentUser)}
+                isAllowed={Boolean(currentUser) || isAdmin}
                 onUnauthorized={() => openAuth('login')}
                 redirectPath="/"
               >

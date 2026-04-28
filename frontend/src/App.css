@@ -1011,6 +1011,7 @@ main {
 .admin-panel .admin-surface-head p { margin: 0; color: var(--ink-600); font-size: 0.88rem; }
 
 .management-grid, .admin-workflow-grid, .management-modern { display: grid; grid-template-columns: 300px 1fr; gap: var(--admin-gap); align-items: start; }
+.admin-workflow-stack { grid-template-columns: 1fr !important; }
 .admin-panel .left-pane, .admin-panel .admin-category-panel { padding: 0.6rem; }
 .admin-panel .category-list { display:flex; flex-direction:column; gap:0.5rem; max-height:56vh; overflow:auto; }
 .category-list-item { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; padding:0.5rem; border-radius:10px; }
@@ -1045,12 +1046,38 @@ main {
 .admin-panel .btn-light { padding:0.36rem 0.6rem; font-size:0.9rem; }
 .admin-panel .btn-primary { padding:0.42rem 0.7rem; font-size:0.92rem; }
 
+.admin-panel .btn.btn-light.admin-mini-btn,
+.admin-panel .btn.btn-primary.admin-mini-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+}
+
+.admin-action-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 0.95rem;
+  margin-right: 0.28rem;
+  line-height: 1;
+  font-size: 0.9em;
+}
+
+.admin-panel .admin-workflow-stack .admin-surface {
+  width: 100%;
+}
+
+.admin-panel .admin-workflow-stack .admin-surface + .admin-surface {
+  margin-top: 0.2rem;
+}
+
 /* KPI chips */
 .admin-surface-kpis { display:flex; gap:0.5rem; flex-wrap:wrap; }
 .admin-kpi-chip { font-size:0.82rem; padding:0.28rem 0.5rem; border-radius:999px; background:linear-gradient(180deg,#f7fbff,#eef6ff); color:var(--blue-700); }
 
 @media (max-width: 980px) {
   .management-grid, .admin-workflow-grid, .management-modern { grid-template-columns: 1fr; }
+  .admin-workflow-stack { grid-template-columns: 1fr !important; }
   .category-list { max-height: 40vh; }
 }
 

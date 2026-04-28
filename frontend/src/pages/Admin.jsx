@@ -8,6 +8,15 @@ const ADMIN_TABS = [
   { id: 'userManagement', label: 'User Management' },
 ]
 
+const ADMIN_ACTION_ICONS = {
+  add: '＋',
+  edit: '✎',
+  delete: '🗑',
+  save: '✓',
+  cancel: '↩',
+  upload: '⬆',
+}
+
 function CategoryManagerSection({
   title,
   emptyMessage,
@@ -42,6 +51,7 @@ function CategoryManagerSection({
           placeholder={addPlaceholder}
         />
         <button type="submit" className="btn btn-primary admin-mini-btn">
+          <span className="admin-action-icon" aria-hidden="true">{ADMIN_ACTION_ICONS.add}</span>
           Add Category
         </button>
       </form>
@@ -69,9 +79,11 @@ function CategoryManagerSection({
                       className="btn btn-primary admin-mini-btn"
                       onClick={() => onSaveEdit(category.id)}
                     >
+                      <span className="admin-action-icon" aria-hidden="true">{ADMIN_ACTION_ICONS.save}</span>
                       Save
                     </button>
                     <button type="button" className="btn btn-light admin-mini-btn" onClick={onCancelEdit}>
+                      <span className="admin-action-icon" aria-hidden="true">{ADMIN_ACTION_ICONS.cancel}</span>
                       Cancel
                     </button>
                   </div>
@@ -85,6 +97,7 @@ function CategoryManagerSection({
                       className="btn btn-light admin-mini-btn"
                       onClick={() => onStartEdit(category)}
                     >
+                      <span className="admin-action-icon" aria-hidden="true">{ADMIN_ACTION_ICONS.edit}</span>
                       Edit
                     </button>
                     <button
@@ -92,6 +105,7 @@ function CategoryManagerSection({
                       className="btn btn-light admin-mini-btn is-danger"
                       onClick={() => onDeleteCategory(category)}
                     >
+                      <span className="admin-action-icon" aria-hidden="true">{ADMIN_ACTION_ICONS.delete}</span>
                       Delete
                     </button>
                   </div>
@@ -110,6 +124,7 @@ function CategoryManagerSection({
                         className="btn btn-light admin-mini-btn is-danger"
                         onClick={() => onDeleteSubcategory(category, subcategoryName)}
                       >
+                        <span className="admin-action-icon" aria-hidden="true">{ADMIN_ACTION_ICONS.delete}</span>
                         Delete
                       </button>
                     </div>
@@ -129,6 +144,7 @@ function CategoryManagerSection({
                   className="btn btn-primary admin-mini-btn"
                   onClick={() => onAddSubcategory(category)}
                 >
+                  <span className="admin-action-icon" aria-hidden="true">{ADMIN_ACTION_ICONS.add}</span>
                   Add Subcategory
                 </button>
               </div>
@@ -832,9 +848,10 @@ function Admin({
 
                       <button
                         type="submit"
-                        className="btn btn-primary"
+                        className="btn btn-primary admin-mini-btn"
                         disabled={!courseCategories.length || uploadLoading}
                       >
+                        <span className="admin-action-icon" aria-hidden="true">{ADMIN_ACTION_ICONS.upload}</span>
                         {uploadLoading ? 'Uploading...' : 'Upload Resource'}
                       </button>
                     </form>
@@ -861,6 +878,7 @@ function Admin({
                             className="btn btn-light admin-mini-btn is-danger"
                             onClick={() => onDeleteResource(resource.id)}
                           >
+                            <span className="admin-action-icon" aria-hidden="true">{ADMIN_ACTION_ICONS.delete}</span>
                             Delete
                           </button>
                         </article>
@@ -884,7 +902,7 @@ function Admin({
                   <span className="admin-kpi-chip">Admin Maintained</span>
                 </div>
 
-                <div className="admin-workflow-grid">
+                <div className="admin-workflow-grid admin-workflow-stack">
                   <section className="admin-surface" aria-label="Quiz category workspace">
                     <div className="admin-surface-head">
                       <h3>Category Workspace</h3>
@@ -1002,9 +1020,10 @@ function Admin({
 
                         <button
                           type="submit"
-                          className="btn btn-primary"
+                          className="btn btn-primary admin-mini-btn"
                           disabled={!quizCategories.length || adminQuizLoading}
                         >
+                          <span className="admin-action-icon" aria-hidden="true">{ADMIN_ACTION_ICONS.add}</span>
                           Add Admin Question
                         </button>
                       </form>
@@ -1035,6 +1054,7 @@ function Admin({
                             disabled={adminQuizLoading}
                             onClick={() => onDeleteAdminQuestion(item.id)}
                           >
+                              <span className="admin-action-icon" aria-hidden="true">{ADMIN_ACTION_ICONS.delete}</span>
                             Delete
                           </button>
                         </article>

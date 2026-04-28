@@ -729,7 +729,7 @@ function Admin({
                   <span className="admin-kpi-chip">{totalCourses} Unique Courses</span>
                 </div>
 
-                <div className="admin-workflow-grid">
+                <div className="admin-vertical-stack admin-workflow-stack">
                   <section className="admin-surface" aria-label="Course category workspace">
                     <div className="admin-surface-head">
                       <h3>Category Workspace</h3>
@@ -769,7 +769,7 @@ function Admin({
                       <p>Publish resources with clear labels so users can find them quickly.</p>
                     </div>
 
-                    <form className="admin-form" onSubmit={handleUploadSubmit}>
+                    <form className="admin-form admin-form-stack" onSubmit={handleUploadSubmit}>
                       <h3>Upload New Course Resource</h3>
                       <label htmlFor="resource-title">Title</label>
                       <input

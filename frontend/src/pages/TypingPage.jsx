@@ -116,6 +116,19 @@ const formatTime = (seconds) => {
   return `${String(minutes).padStart(2, '0')}:${String(remaining).padStart(2, '0')}`
 }
 
+const normalizeCustomSecondsInput = (value) => {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return ''
+  }
+
+  if (!/^\d+$/.test(trimmed)) {
+    return null
+  }
+
+  return String(Math.max(1, Math.floor(Number(trimmed))))
+}
+
 function TypingPage({
   user,
   isAdmin,
@@ -583,15 +596,27 @@ function TypingPage({
                           return
                         }
 
-                        const nextValue = event.target.value
+                        const nextValue = normalizeCustomSecondsInput(event.target.value)
+                        if (nextValue === null) {
+                          return
+                        }
+
                         setCustomSeconds(nextValue)
                         if (selectedTimerKey === 'custom') {
                           const parsed = Number(nextValue)
-                          if (Number.isFinite(parsed) && parsed > 0) {
-                            setRemainingTime(Math.floor(parsed))
-                          }
+                          setRemainingTime(Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1)
                         }
                         setTestConfigError('')
+                      }}
+                      onBlur={() => {
+                        if (isTestRunning || customSeconds) {
+                          return
+                        }
+
+                        setCustomSeconds('1')
+                        if (selectedTimerKey === 'custom') {
+                          setRemainingTime(1)
+                        }
                       }}
                     />
                   </div>

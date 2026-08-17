@@ -590,7 +590,7 @@ function TypingPage({
                       inputMode="numeric"
                       value={customSeconds}
                       onKeyDown={(event) => {
-                        if (event.key === '-') {
+                        if (event.key === '-' || event.key === 'Subtract') {
                           window.alert(POSITIVE_SECONDS_MESSAGE)
                           setTestConfigError(POSITIVE_SECONDS_MESSAGE)
                           event.preventDefault()
@@ -598,6 +598,18 @@ function TypingPage({
                         }
 
                         if (['+', 'e', 'E'].includes(event.key)) {
+                          event.preventDefault()
+                        }
+                      }}
+                      onPaste={(event) => {
+                        if (isTestRunning) {
+                          return
+                        }
+
+                        const pasted = event.clipboardData.getData('text')
+                        if (pasted.includes('-')) {
+                          window.alert(POSITIVE_SECONDS_MESSAGE)
+                          setTestConfigError(POSITIVE_SECONDS_MESSAGE)
                           event.preventDefault()
                         }
                       }}
@@ -609,6 +621,7 @@ function TypingPage({
                         if (event.target.value.includes('-')) {
                           window.alert(POSITIVE_SECONDS_MESSAGE)
                           setTestConfigError(POSITIVE_SECONDS_MESSAGE)
+                          event.target.value = customSeconds
                           return
                         }
 

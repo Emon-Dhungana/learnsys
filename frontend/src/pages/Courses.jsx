@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import PdfViewer from '../components/PdfViewer'
 
 function Courses({
   resources,
@@ -10,6 +11,9 @@ function Courses({
 }) {
   const [showAll, setShowAll] = useState(false)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('all')
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false)
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState(null)
+  const [selectedPdfFileName, setSelectedPdfFileName] = useState(null)
 
   const categoryNames = courseCategories.map((item) => item.name)
 
@@ -87,23 +91,10 @@ function Courses({
       resource.fileName?.toLowerCase().endsWith('.pdf') ||
       sourceUrl.toLowerCase().includes('.pdf')
 
-    // For PDFs, add attachment flag and ensure public accessibility
-    if (looksLikePdf) {
-      // If it's already a Cloudinary URL, add the attachment flag
-      if (sourceUrl.includes('res.cloudinary.com')) {
-        // Replace /image/upload/ with /raw/upload/ if needed
-        let url = sourceUrl.replace('/image/upload/', '/raw/upload/')
-        
-        // Add attachment flag for better browser handling
-        if (!url.includes('fl_attachment')) {
-          url = url.replace('/raw/upload/', '/raw/upload/fl_attachment,/')
-        }
-        
-        // Use http instead of https for better compatibility
-        url = url.replace('https://res.cloudinary.com', 'https://res.cloudinary.com')
-        
-        return url
-      }
+    // For PDFs from Cloudinary, ensure proper format
+    if (looksLikePdf && sourceUrl.includes('res.cloudinary.com')) {
+      // Replace /image/upload/ with /raw/upload/ if needed
+      return sourceUrl.replace('/image/upload/', '/raw/upload/')
     }
 
     return sourceUrl
@@ -117,48 +108,14 @@ function Courses({
     )
   }
 
-  const openPdfInNewTab = async (resourceUrl) => {
-    // For Cloudinary URLs, directly open them as they should be publicly accessible
-    if (resourceUrl.includes('res.cloudinary.com')) {
-      window.open(resourceUrl, '_blank', 'noopener,noreferrer')
-      return
-    }
-
-    const previewTab = window.open('', '_blank')
-
-    if (!previewTab) {
-      throw new Error('Popup blocked. Please allow popups for this site.')
-    }
-
-    previewTab.document.write('<p style="font-family: sans-serif; padding: 1rem;">Loading PDF...</p>')
-
-    const controller = new AbortController()
-    const timeoutId = window.setTimeout(() => {
-      controller.abort()
-    }, 12000)
-
-    try {
-      const response = await fetch(resourceUrl, { signal: controller.signal })
-      if (!response.ok) {
-        throw new Error('Unable to fetch PDF preview.')
-      }
-
-      const blob = await response.blob()
-      const objectUrl = URL.createObjectURL(blob)
-      previewTab.location.replace(objectUrl)
-
-      window.setTimeout(() => {
-        URL.revokeObjectURL(objectUrl)
-      }, 60000)
-    } catch {
-      // Important: reuse the same already-opened tab to avoid popup blockers.
-      previewTab.location.replace(resourceUrl)
-    } finally {
-      window.clearTimeout(timeoutId)
-    }
+  const openPdfViewer = (resource) => {
+    const resourceUrl = getResourceUrl(resource)
+    setSelectedPdfUrl(resourceUrl)
+    setSelectedPdfFileName(resource.fileName)
+    setPdfViewerOpen(true)
   }
 
-  const handleViewResource = async (resource) => {
+  const handleViewResource = (resource) => {
     const resourceUrl = getResourceUrl(resource)
     if (!resourceUrl || resourceUrl === '#') {
       return
@@ -167,7 +124,7 @@ function Courses({
     onResourceView?.(resource.id)
 
     if (isPdfResource(resource)) {
-      await openPdfInNewTab(resourceUrl)
+      openPdfViewer(resource)
       return
     }
 
@@ -175,7 +132,15 @@ function Courses({
   }
 
   return (
-    <section className="courses-page" aria-labelledby="courses-heading">
+    <>
+      <PdfViewer
+        pdfUrl={selectedPdfUrl}
+        fileName={selectedPdfFileName}
+        isOpen={pdfViewerOpen}
+        onClose={() => setPdfViewerOpen(false)}
+      />
+
+      <section className="courses-page" aria-labelledby="courses-heading">
       <header className="courses-hero">
         <p className="courses-tag">Learning Resources</p>
         <h1 id="courses-heading">Courses Library</h1>
@@ -274,6 +239,7 @@ function Courses({
         </div>
       )}
     </section>
+    </>
   )
 }
 

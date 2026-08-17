@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { TypingLessonSelector, TYPING_LESSONS } from '../components/TypingLessonSelector'
 
 const TAB_PRACTICE = 'Practice Mode'
 const TAB_TEST = 'Test Mode'
@@ -142,15 +143,18 @@ function TypingPage({
 }) {
   const [activeTab, setActiveTab] = useState(TAB_PRACTICE)
   const [selectedLanguage, setSelectedLanguage] = useState('english')
+  const [isLessonSelectorOpen, setIsLessonSelectorOpen] = useState(false)
+  const [selectedLesson, setSelectedLesson] = useState(null)
+  const [selectedLevel, setSelectedLevel] = useState(null)
 
-  const activeTextPool = selectedLanguage === 'nepali' ? NEPALI_SAMPLE_TEXTS : SAMPLE_TEXTS
+  const activeTextPool = selectedLesson ? selectedLesson.texts : (selectedLanguage === 'nepali' ? NEPALI_SAMPLE_TEXTS : SAMPLE_TEXTS)
 
-  const [practiceText, setPracticeText] = useState(() => createLongText(SAMPLE_TEXTS))
+  const [practiceText, setPracticeText] = useState(() => createLongText(activeTextPool))
   const [practiceInput, setPracticeInput] = useState('')
 
   const [selectedTimerKey, setSelectedTimerKey] = useState('60')
   const [customSeconds, setCustomSeconds] = useState('90')
-  const [testText, setTestText] = useState(() => createLongText(SAMPLE_TEXTS))
+  const [testText, setTestText] = useState(() => createLongText(activeTextPool))
   const [testInput, setTestInput] = useState('')
   const [remainingTime, setRemainingTime] = useState(60)
   const [isTestRunning, setIsTestRunning] = useState(false)
@@ -160,6 +164,16 @@ function TypingPage({
   const timerRef = useRef(null)
   const metricsRef = useRef(initialMetrics())
   const isRunningRef = useRef(false)
+
+  const handleSelectLesson = (selection) => {
+    setSelectedLevel(selection.level)
+    setSelectedLesson(selection.lesson)
+    setIsLessonSelectorOpen(false)
+    setPracticeText(createLongText(selection.lesson.texts))
+    setPracticeInput('')
+    setTestText(createLongText(selection.lesson.texts))
+    setTestInput('')
+  }
 
   const practiceCorrectCount = useMemo(() => {
     let correct = 0
@@ -454,11 +468,37 @@ function TypingPage({
 
   return (
     <section className="typing-page" aria-labelledby="typing-heading">
+      <TypingLessonSelector isOpen={isLessonSelectorOpen} onSelectLesson={handleSelectLesson} />
+
       <header className="typing-hero">
         <p className="typing-tag">Skill Builder</p>
         <h1 id="typing-heading">Typing Practice and Testing</h1>
         <p>Train with guided practice, timed tests, and performance insights.</p>
+        
+        {selectedLesson && (
+          <div className="lesson-info-banner">
+            <p className="lesson-badge">
+              <strong>{selectedLevel}</strong> • {selectedLesson.title}
+            </p>
+            <button 
+              type="button"
+              className="btn btn-light btn-sm"
+              onClick={() => setIsLessonSelectorOpen(true)}
+            >
+              Change Lesson
+            </button>
+          </div>
+        )}
+
         <div className="courses-toolbar">
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setIsLessonSelectorOpen(true)}
+          >
+            Select Typing Lesson
+          </button>
+
           <select
             className="courses-filter-select"
             value={selectedLanguage}

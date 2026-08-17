@@ -1647,6 +1647,202 @@ main {
   color: var(--ink-700);
 }
 
+/* Typing Lesson Selector Styles */
+.lesson-selector-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.lesson-selector-modal {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 800px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.lesson-selector-modal h2 {
+  margin: 0 0 0.5rem 0;
+  color: var(--ink-900);
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+}
+
+.lesson-selector-subtitle {
+  margin: 0 0 1.5rem 0;
+  color: var(--ink-700);
+  font-size: 1rem;
+}
+
+.lesson-levels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.lesson-level-card {
+  border: 2px solid #d6e5f6;
+  border-radius: 16px;
+  background: #f8fbff;
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lesson-level-card:hover {
+  border-color: var(--blue-500);
+  background: linear-gradient(135deg, #f0f7ff, #e8f3ff);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.15);
+}
+
+.lesson-level-badge {
+  display: inline-block;
+  background: var(--blue-500);
+  color: white;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.lesson-level-card h3 {
+  margin: 0.5rem 0 0.35rem 0;
+  color: var(--ink-900);
+  font-size: 1.25rem;
+}
+
+.lesson-level-card p {
+  margin: 0;
+  color: var(--ink-700);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  flex-grow: 1;
+}
+
+.lesson-level-footer {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid #dbe8f3;
+  color: var(--blue-600);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.lesson-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--blue-600);
+  padding: 0.5rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  transition: color 0.2s ease;
+}
+
+.lesson-back-button:hover {
+  color: var(--blue-700);
+}
+
+.lesson-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.lesson-item-card {
+  border: 1.5px solid #dbe8f3;
+  border-radius: 14px;
+  background: white;
+  padding: 1.25rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lesson-item-card:hover {
+  border-color: var(--blue-400);
+  background: #f9fcff;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.12);
+  transform: translateY(-2px);
+}
+
+.lesson-item-card h4 {
+  margin: 0;
+  color: var(--ink-900);
+  font-size: 1.1rem;
+}
+
+.lesson-item-card p {
+  margin: 0.35rem 0 0 0;
+  color: var(--ink-700);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  flex-grow: 1;
+}
+
+.lesson-item-footer {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e8f0f7;
+  color: var(--blue-600);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.lesson-info-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  background: linear-gradient(135deg, #dbeafe, #e0f2fe);
+  border: 1px solid #a5d3ff;
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+
+.lesson-badge {
+  margin: 0;
+  color: var(--blue-700);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.btn-sm {
+  padding: 0.45rem 0.8rem;
+  font-size: 0.85rem;
+}
+
 .courses-page,
 .admin-page {
   margin-top: 1rem;

@@ -3,117 +3,117 @@ import { useState } from 'react'
 const TYPING_LESSONS = {
   Basic: {
     level: 1,
-    description: 'Start with fundamental typing practice',
+    description: 'Learn fundamental keys',
     lessons: [
       {
         id: 'basic-1',
-        title: 'Home Row Keys',
-        content:
-          'Master the home row keys: a s d f j k l. These keys are the foundation of touch typing. Keep your fingers on these keys and practice moving without looking down.',
+        title: 'Home Row',
+        keys: 'a s d f j k l',
+        content: 'Focus: a s d f j k l',
         texts: [
-          'The quick brown fox jumps over the lazy dog.',
-          'A quick brown fox jumps over the lazy dog.',
-          'The fox jumps over the lazy dog quickly.',
+          'dad lad sad flask flags flask lads dads ads alls falls halls jags ads',
+          'ask fall fads sad add ads asks flask lads dads jags flasks',
+          'lads ask ads falls flask dads jags alls fads hall gals',
         ],
       },
       {
         id: 'basic-2',
-        title: 'Top Row Keys',
-        content:
-          'Now learn the top row: q w e r t y u i o p. Combine these with the home row for more complete practice.',
+        title: 'Top Row',
+        keys: 'q w e r t y u i o p',
+        content: 'Focus: q w e r t y u i o p',
         texts: [
-          'The typewriter quickly typed the words here.',
-          'We type the question with quick fingers.',
-          'Your typing quest starts with practice today.',
+          'quit quiet quip weary wore wipe wire type retry pure pyre poetry output quiet',
+          'write wrote rope tire wire query worry quote trite retry quiver poetry',
+          'tower power three try truly pretty port query quiet require worry output rope',
         ],
       },
       {
         id: 'basic-3',
-        title: 'Bottom Row Keys',
-        content:
-          'Practice the bottom row: z x c v b n m. These complete your basic typing foundation.',
+        title: 'Bottom Row',
+        keys: 'z x c v b n m',
+        content: 'Focus: z x c v b n m',
         texts: [
-          'The man can make the box very quickly.',
-          'Zero mistakes come from careful practice each day.',
-          'Exact timing and careful method make perfect work.',
+          'buzz zone zero vex voice zinc zone zing box maze buzz blab comb',
+          'nexus venue vendor zone zero zinc vine vice vest buzz maze box venom',
+          'zero zany buzz zone boxes venom vice voice venue next buzz comb',
         ],
       },
     ],
   },
   Intermediate: {
     level: 2,
-    description: 'Build speed and accuracy with varied content',
+    description: 'Build speed with combined keys',
     lessons: [
       {
         id: 'intermediate-1',
-        title: 'Common Words',
-        content:
-          'Type common English words with consistent accuracy. Focus on maintaining rhythm and precision.',
+        title: 'All Letters',
+        keys: 'a-z',
+        content: 'Focus: All alphabet keys combined',
         texts: [
-          'Learning becomes powerful when consistency, reflection, and deliberate practice work together each day.',
-          'The best study routine is one that balances deep focus, short breaks, and clear goals.',
-          'Strong learners ask better questions, review mistakes honestly, and return with strategy.',
+          'Learning becomes powerful when consistency reflection and deliberate practice work together.',
+          'The best study routine balances deep focus short breaks and clear goals for success.',
+          'Strong learners ask questions review mistakes honestly and return with better strategies.',
         ],
       },
       {
         id: 'intermediate-2',
-        title: 'Numbers and Symbols',
-        content:
-          'Increase difficulty by typing numbers and symbols mixed with regular text. Speed and accuracy are equally important.',
+        title: 'Numbers & Symbols',
+        keys: '0-9 ! @ # $ % ^ & *',
+        content: 'Focus: Numbers and basic symbols',
         texts: [
-          'The price is $45.99 and the quantity is 100 units available today.',
-          'Order #12345 was placed on 2024-01-15 with discount code SAVE20.',
-          'Contact us at +1-800-555-1234 or email support@example.com for help.',
+          'Price: $99.99, Qty: 5, Code: ABC123, Save: 25% off all items',
+          'Contact: +1-800-555-1234, Email: user@domain.com, ID: #98765',
+          'Order total: $1,250 (50% deposit = $625), Balance due: 2024-01-15',
         ],
       },
       {
         id: 'intermediate-3',
-        title: 'Longer Passages',
-        content:
-          'Type longer, more complex passages to improve stamina and maintain consistency over extended sessions.',
+        title: 'Extended Passages',
+        keys: 'a-z, 0-9, symbols',
+        content: 'Focus: Longer texts with rhythm',
         texts: [
-          'Typing skill improves faster when you prioritize accuracy first and speed second with patient repetition. The fingers learn muscle memory through consistent practice, and the mind develops a better connection with the keyboard layout.',
-          'Small improvements tracked over time become meaningful progress that builds confidence and mastery. Every session adds to your foundation, and consistency matters more than intensity in building lasting skills.',
-          'The journey to typing mastery requires dedication, focus, and the willingness to learn from mistakes. With each error, you gain knowledge about your weak points and how to strengthen them for future sessions.',
+          'Typing skill improves when you prioritize accuracy first and speed second through patient practice. Consistency matters more than intensity in building lasting skills and confidence.',
+          'Every practice session adds to your foundation. Small improvements tracked over time become meaningful progress that builds strong muscle memory and keyboard familiarity.',
+          'The key to mastery is dedication and focus. Learn from each mistake and strengthen your weak areas. With time, typing becomes second nature and effortless.',
         ],
       },
     ],
   },
   Advanced: {
     level: 3,
-    description: 'Master high-speed typing with complex content',
+    description: 'Master with complex content',
     lessons: [
       {
         id: 'advanced-1',
-        title: 'Technical Content',
-        content:
-          'Type technical text with special characters, code snippets, and complex terminology. Perfect for developers and technical professionals.',
+        title: 'Technical Syntax',
+        keys: 'symbols (), {}, [], @, /, =, .',
+        content: 'Focus: Code-like syntax and symbols',
         texts: [
-          'The function validateEmail(email) checks if email.includes("@") && email.includes(".") to verify format.',
-          'Install the package with: npm install react-router-dom@6.0.0 && npm start to begin development.',
-          'Configure settings in config/app.js: { debug: true, timeout: 5000, retries: 3, enableCache: false }.',
+          'function validate(email) { return email.includes("@") && email.length > 5; }',
+          'npm install package@1.2.3 --save-dev && npm run build --production',
+          'const config = { debug: true, port: 3000, timeout: 5000, cache: false };',
         ],
       },
       {
         id: 'advanced-2',
-        title: 'Rapid-Fire Practice',
-        content:
-          'Practice high-speed typing with challenging, varied content. Maintain accuracy while pushing for maximum speed.',
+        title: 'High Speed',
+        keys: 'a-z, rapid repeated patterns',
+        content: 'Focus: Speed with repeated letter patterns',
         texts: [
-          'Exceptional expertise emerges from extensive experience experimenting with emerging technologies and excellent educational endeavors.',
-          'Productivity peaks through purposeful persistence, periodic progress tracking, and proactive professional development practices.',
-          'Sophisticated systems significantly streamline substantial software solutions, substantially supporting seamless synchronization and sophisticated security schemes.',
+          'Excessive expertise emerges through experience executing experiments with emerging technologies.',
+          'Successful systems streamline substantial solutions supporting seamless synchronization and security.',
+          'Persistent practice produces powerful proficiency promoting professional performance and progress.',
         ],
       },
       {
         id: 'advanced-3',
-        title: 'Mixed Challenge',
-        content:
-          'The ultimate challenge combining everything: speed, accuracy, numbers, symbols, and complex sentences all together.',
+        title: 'Full Challenge',
+        keys: 'all keys, symbols, numbers, punctuation',
+        content: 'Focus: Everything combined - maximum difficulty',
         texts: [
-          'According to the 2024 report (v3.2.1), approximately 87% of users prefer modern UI/UX design. Contact: CEO@CompanyXYZ.com; Phone: +1-888-999-2024.',
-          'The algorithm processes 1,000,000 records/second @ 99.99% accuracy. Status: ACTIVE (since 2023-01-15). Config: env=prod; debug=false; version=2.4.5.',
-          'Best practices include: (1) automated testing, (2) CI/CD pipelines, (3) monitoring dashboards. Investment: $500K+. ROI: 340% annually. Contact support@dev.io for details.',
+          'Status Report v2.4.5 (2024-01-15): Processed 1,000,000+ records @ 99.9% accuracy. Cost: $50K. ROI: 340%.',
+          'Meeting: Thu 2:00pm, Location: Room A-12 (Bldg #3). Topics: Q4 results, 2024 roadmap, budget allocation.',
+          'API endpoint: https://api.example.com/v3/users?filter=active&sort=-date&limit=100&token=ABC123',
         ],
       },
     ],
@@ -186,6 +186,7 @@ function TypingLessonSelector({ onSelectLesson, isOpen }) {
                   onClick={() => handleLessonClick(lesson)}
                 >
                   <h4>{lesson.title}</h4>
+                  <div className="lesson-keys-badge">{lesson.keys}</div>
                   <p>{lesson.content}</p>
                   <div className="lesson-item-footer">
                     {lesson.texts.length} practice texts

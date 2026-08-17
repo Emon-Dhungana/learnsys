@@ -155,7 +155,6 @@ function TypingPage({
   const [testSummary, setTestSummary] = useState(null)
   const [testConfigError, setTestConfigError] = useState('')
 
-  const [timerSoundEnabled, setTimerSoundEnabled] = useState(false)
   const timerRef = useRef(null)
   const metricsRef = useRef(initialMetrics())
   const isRunningRef = useRef(false)
@@ -375,10 +374,6 @@ function TypingPage({
     timerRef.current = setInterval(() => {
       setRemainingTime((prev) => {
         if (prev <= 1) {
-          if (timerSoundEnabled) {
-            console.log('Typing timer ended')
-          }
-
           setTimeout(() => finalizeTest(selectedDuration), 0)
           return 0
         }
@@ -621,16 +616,6 @@ function TypingPage({
                     />
                   </div>
                 ) : null}
-
-                <label className="typing-toggle" htmlFor="sound-toggle">
-                  <input
-                    id="sound-toggle"
-                    type="checkbox"
-                    checked={timerSoundEnabled}
-                    onChange={(event) => setTimerSoundEnabled(event.target.checked)}
-                  />
-                  Sound Toggle
-                </label>
 
                 <button type="button" className="btn btn-primary" onClick={startTest}>
                   Start Test

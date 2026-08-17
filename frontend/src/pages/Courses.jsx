@@ -87,8 +87,23 @@ function Courses({
       resource.fileName?.toLowerCase().endsWith('.pdf') ||
       sourceUrl.toLowerCase().includes('.pdf')
 
-    if (looksLikePdf && sourceUrl.includes('/image/upload/')) {
-      return sourceUrl.replace('/image/upload/', '/raw/upload/')
+    // For PDFs, add attachment flag and ensure public accessibility
+    if (looksLikePdf) {
+      // If it's already a Cloudinary URL, add the attachment flag
+      if (sourceUrl.includes('res.cloudinary.com')) {
+        // Replace /image/upload/ with /raw/upload/ if needed
+        let url = sourceUrl.replace('/image/upload/', '/raw/upload/')
+        
+        // Add attachment flag for better browser handling
+        if (!url.includes('fl_attachment')) {
+          url = url.replace('/raw/upload/', '/raw/upload/fl_attachment,/')
+        }
+        
+        // Use http instead of https for better compatibility
+        url = url.replace('https://res.cloudinary.com', 'https://res.cloudinary.com')
+        
+        return url
+      }
     }
 
     return sourceUrl
@@ -103,6 +118,12 @@ function Courses({
   }
 
   const openPdfInNewTab = async (resourceUrl) => {
+    // For Cloudinary URLs, directly open them as they should be publicly accessible
+    if (resourceUrl.includes('res.cloudinary.com')) {
+      window.open(resourceUrl, '_blank', 'noopener,noreferrer')
+      return
+    }
+
     const previewTab = window.open('', '_blank')
 
     if (!previewTab) {

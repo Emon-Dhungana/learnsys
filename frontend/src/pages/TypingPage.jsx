@@ -129,6 +129,8 @@ const normalizeCustomSecondsInput = (value) => {
   return String(Math.max(1, Math.floor(Number(trimmed))))
 }
 
+const POSITIVE_SECONDS_MESSAGE = 'Number should be positive.'
+
 function TypingPage({
   user,
   isAdmin,
@@ -588,12 +590,25 @@ function TypingPage({
                       inputMode="numeric"
                       value={customSeconds}
                       onKeyDown={(event) => {
-                        if (['-', '+', 'e', 'E'].includes(event.key)) {
+                        if (event.key === '-') {
+                          window.alert(POSITIVE_SECONDS_MESSAGE)
+                          setTestConfigError(POSITIVE_SECONDS_MESSAGE)
+                          event.preventDefault()
+                          return
+                        }
+
+                        if (['+', 'e', 'E'].includes(event.key)) {
                           event.preventDefault()
                         }
                       }}
                       onChange={(event) => {
                         if (isTestRunning) {
+                          return
+                        }
+
+                        if (event.target.value.includes('-')) {
+                          window.alert(POSITIVE_SECONDS_MESSAGE)
+                          setTestConfigError(POSITIVE_SECONDS_MESSAGE)
                           return
                         }
 

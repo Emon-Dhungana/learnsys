@@ -1168,8 +1168,6 @@ main {
 }
 
 .typing-hero {
-  border: 1px solid var(--line-soft);
-  border-radius: 24px;
   padding: clamp(1.2rem, 3vw, 2rem);
   background:
     radial-gradient(circle at 80% 12%, rgba(185, 218, 251, 0.45), transparent 35%),
@@ -1316,12 +1314,6 @@ main {
 .typing-test-controls .typing-select {
   width: auto;
   min-width: 110px;
-}
-
-.typing-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
 }
 
 .typing-progress-wrap {

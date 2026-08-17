@@ -585,7 +585,13 @@ function TypingPage({
                       type="number"
                       min={1}
                       step={1}
+                      inputMode="numeric"
                       value={customSeconds}
+                      onKeyDown={(event) => {
+                        if (['-', '+', 'e', 'E'].includes(event.key)) {
+                          event.preventDefault()
+                        }
+                      }}
                       onChange={(event) => {
                         if (isTestRunning) {
                           return

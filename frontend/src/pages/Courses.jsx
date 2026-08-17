@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import PdfViewer from '../components/PdfViewer'
+import { fetchPdfAsBlob, downloadPdf } from '../utils/pdfUtils'
 
 function Courses({
   resources,
@@ -121,6 +122,30 @@ function Courses({
     window.open(resourceUrl, '_blank', 'noopener,noreferrer')
   }
 
+  const handleDownloadResource = async (resource) => {
+    const resourceUrl = getResourceUrl(resource)
+    if (!resourceUrl || resourceUrl === '#') {
+      return
+    }
+
+    onResourceDownload?.(resource.id)
+
+    try {
+      const blob = await fetchPdfAsBlob(resourceUrl)
+      downloadPdf(blob, resource.fileName)
+    } catch (error) {
+      // Fallback to direct download
+      const link = document.createElement('a')
+      link.href = resourceUrl
+      link.download = resource.fileName || 'document'
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  }
+
   return (
     <>
       <PdfViewer
@@ -215,16 +240,13 @@ function Courses({
                   View
                 </button>
 
-                <a
+                <button
+                  type="button"
                   className="btn btn-light course-action"
-                  href={getResourceUrl(resource)}
-                  download={resource.fileName}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => onResourceDownload?.(resource.id)}
+                  onClick={() => handleDownloadResource(resource)}
                 >
                   Download
-                </a>
+                </button>
               </div>
             </article>
           ))}

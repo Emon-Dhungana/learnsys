@@ -8,6 +8,9 @@ function PdfViewer({ pdfUrl, fileName, isOpen, onClose }) {
     return null
   }
 
+  // Use Google Drive PDF viewer for better compatibility and CORS handling
+  const viewerUrl = `https://docs.google.com/gvf/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`
+
   const handleIframeLoad = () => {
     setIsLoading(false)
     setError(null)
@@ -21,6 +24,7 @@ function PdfViewer({ pdfUrl, fileName, isOpen, onClose }) {
       const link = document.createElement('a')
       link.href = pdfUrl
       link.download = fileName || 'document.pdf'
+      link.target = '_blank'
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -53,17 +57,18 @@ function PdfViewer({ pdfUrl, fileName, isOpen, onClose }) {
           {error ? (
             <div className="pdf-viewer-error">
               <p>{error}</p>
-              <a href={pdfUrl} download={fileName} className="btn btn-primary">
+              <a href={pdfUrl} download={fileName} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
                 Download PDF
               </a>
             </div>
           ) : (
             <iframe
-              src={pdfUrl}
+              src={viewerUrl}
               title={fileName || 'PDF Viewer'}
               className="pdf-viewer-iframe"
               onLoad={handleIframeLoad}
               onError={handleIframeError}
+              sandbox="allow-same-origin allow-scripts allow-popups allow-presentation"
             />
           )}
         </div>

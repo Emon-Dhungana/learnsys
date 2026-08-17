@@ -12,7 +12,6 @@ export const uploadToCloudinary = async (file, onProgress = () => {}) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", "learnsys_upload");
-    // Ensure file is publicly accessible
     formData.append("access_control", JSON.stringify([{ access_type: "public" }]));
 
     onProgress(10);
@@ -32,8 +31,19 @@ export const uploadToCloudinary = async (file, onProgress = () => {}) => {
 
     onProgress(100);
 
+    // Construct public URL for PDFs - format: https://res.cloudinary.com/{cloud}/raw/upload/{public_id}
+    let publicUrl = data.secure_url;
+    
+    if (data.public_id) {
+      const resourceType = data.resource_type || 'raw';
+      // Clean public_id - remove file extension if present
+      const cleanPublicId = data.public_id.replace(/\.(pdf|PDF)$/, '');
+      publicUrl = `https://res.cloudinary.com/dm6wsncor/${resourceType}/upload/${cleanPublicId}.pdf`;
+    }
+
     return {
       secure_url: data.secure_url,
+      public_url: publicUrl,
       public_id: data.public_id,
       resource_type: data.resource_type,
     };

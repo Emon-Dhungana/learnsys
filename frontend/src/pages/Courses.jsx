@@ -87,16 +87,6 @@ function Courses({
       return '#'
     }
 
-    const looksLikePdf =
-      resource.fileName?.toLowerCase().endsWith('.pdf') ||
-      sourceUrl.toLowerCase().includes('.pdf')
-
-    // For PDFs from Cloudinary, ensure proper format
-    if (looksLikePdf && sourceUrl.includes('res.cloudinary.com')) {
-      // Replace /image/upload/ with /raw/upload/ if needed
-      return sourceUrl.replace('/image/upload/', '/raw/upload/')
-    }
-
     return sourceUrl
   }
 
@@ -229,6 +219,8 @@ function Courses({
                   className="btn btn-light course-action"
                   href={getResourceUrl(resource)}
                   download={resource.fileName}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   onClick={() => onResourceDownload?.(resource.id)}
                 >
                   Download

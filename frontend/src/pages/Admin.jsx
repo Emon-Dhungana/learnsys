@@ -605,7 +605,7 @@ function Admin({
         description: uploadData.description.trim(),
         category: selectedCourseCategory.name,
         subcategory: uploadData.subcategory.trim(),
-        fileUrl: result.secure_url,
+        fileUrl: result.public_url || result.secure_url,
         publicId: result.public_id,
         resourceType: result.resource_type,
         fileName: uploadData.file.name,

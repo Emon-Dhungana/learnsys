@@ -20,7 +20,7 @@ const getTypingRemark = (wpm) => {
   return 'Excellent speed. Maintain rhythm and reduce small errors.'
 }
 
-function Dashboard({ user, resources, typingStats, courseProgress, onEditPreferences }) {
+function Dashboard({ user, resources, typingStats, courseProgress, onEditPreferences, roleMode, onToggleRole }) {
   const memberSinceText = user?.createdAtMs
     ? `Member since: ${new Date(user.createdAtMs).toLocaleDateString()}`
     : 'Member since: Unavailable'
@@ -102,9 +102,16 @@ function Dashboard({ user, resources, typingStats, courseProgress, onEditPrefere
         </p>
         <p className="dashboard-member-since">{memberSinceText}</p>
 
-        <button type="button" className="btn btn-light" onClick={onEditPreferences}>
-          Edit Preferences
-        </button>
+        <div className="dashboard-actions">
+          <button type="button" className="btn btn-light" onClick={onEditPreferences}>
+            Edit Preferences
+          </button>
+          {roleMode === 'user' ? (
+            <button type="button" className="btn btn-primary" onClick={onToggleRole}>
+              Switch to Admin
+            </button>
+          ) : null}
+        </div>
       </header>
 
       <div className="dashboard-grid">

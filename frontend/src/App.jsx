@@ -1639,6 +1639,8 @@ function App() {
                     effectiveUser?.username ? courseProgressByUsername[effectiveUser.username] ?? {} : {}
                   }
                   onEditPreferences={openPreferences}
+                  roleMode={adminViewMode}
+                  onToggleRole={() => setAdminViewMode('admin')}
                 />
               </ProtectedRoute>
             }

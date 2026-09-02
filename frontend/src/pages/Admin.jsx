@@ -188,6 +188,7 @@ function Admin({
   onAdminLogout,
 }) {
   const [activeTab, setActiveTab] = useState('overview')
+  const isPreviewUserMode = roleMode === 'user'
 
   const [courseCategoryName, setCourseCategoryName] = useState('')
   const [courseCategoryError, setCourseCategoryError] = useState('')
@@ -662,7 +663,13 @@ function Admin({
                   key={tab.id}
                   type="button"
                   className={`admin-nav-tab ${activeTab === tab.id ? 'is-active' : ''}`}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    if (!isPreviewUserMode) {
+                      setActiveTab(tab.id)
+                    }
+                  }}
+                  disabled={isPreviewUserMode}
+                  aria-disabled={isPreviewUserMode}
                 >
                   {tab.label}
                 </button>

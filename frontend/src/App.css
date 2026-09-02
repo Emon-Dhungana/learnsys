@@ -2613,6 +2613,11 @@ main {
   color: #153d6d;
 }
 
+.admin-nav-tab:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .admin-role-toggle {
   display: grid;
   gap: 0.45rem;

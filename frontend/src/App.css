@@ -2613,6 +2613,73 @@ main {
   color: #153d6d;
 }
 
+.admin-role-toggle {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.admin-role-label {
+  color: var(--admin-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.admin-role-switch {
+  border: 1px solid var(--admin-line);
+  border-radius: 999px;
+  background: #eef5ff;
+  padding: 0.38rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  color: var(--admin-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.admin-role-switch:hover {
+  border-color: #8fb7e6;
+}
+
+.admin-role-switch-track {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2a78d2, #76baff);
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+}
+
+.admin-role-switch-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  transform: translateX(0);
+  transition: transform 0.2s ease;
+}
+
+.admin-role-switch.is-user .admin-role-switch-track {
+  background: linear-gradient(135deg, #4d7ee8, #8fc7ff);
+}
+
+.admin-role-switch.is-user .admin-role-switch-thumb {
+  transform: translateX(18px);
+}
+
+.admin-role-switch-text {
+  min-width: 86px;
+  text-align: left;
+}
+
 .admin-logout-btn {
   width: 100%;
 }

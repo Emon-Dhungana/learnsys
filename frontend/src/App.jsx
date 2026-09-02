@@ -252,6 +252,8 @@ function App() {
   const [authView, setAuthView] = useState('login')
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [adminViewMode, setAdminViewMode] = useState('admin')
+  const [adminPreviewUser, setAdminPreviewUser] = useState(null)
   const [isSessionRestored, setIsSessionRestored] = useState(false)
   const [adminAuthError, setAdminAuthError] = useState('')
   const [adminQuizzes, setAdminQuizzes] = useState([])
@@ -670,6 +672,8 @@ function App() {
   const handleLogout = () => {
     setCurrentUser(null)
     setIsAdmin(false)
+    setAdminViewMode('admin')
+    setAdminPreviewUser(null)
     setIsPreferencesOpen(false)
     restoredUserStateForRef.current = null
     localStorage.removeItem(userStorageKey)
@@ -710,9 +714,21 @@ function App() {
 
   const handleAdminLogout = () => {
     setIsAdmin(false)
+    setAdminViewMode('admin')
+    setAdminPreviewUser(null)
     localStorage.removeItem(adminStorageKey)
     navigate('/')
   }
+
+  const effectiveUser = adminViewMode === 'user'
+    ? currentUser ?? adminPreviewUser ?? {
+        username: 'Preview User',
+        email: 'preview@learnsys.local',
+        preferences: sanitizePreferences({ categories: [], subcategories: [] }),
+      }
+    : currentUser
+
+  const effectiveIsAdmin = adminViewMode === 'admin' && isAdmin
 
   const handleNavClick = (link) => {
     if (link === 'Home') {
@@ -726,7 +742,7 @@ function App() {
     }
 
     if (link === 'Quiz') {
-      if (!currentUser && !isAdmin) {
+      if (!effectiveUser && !effectiveIsAdmin) {
         openAuth('login')
         return
       }
@@ -736,7 +752,7 @@ function App() {
     }
 
     if (link === 'Typing') {
-      if (!currentUser && !isAdmin) {
+      if (!effectiveUser && !effectiveIsAdmin) {
         openAuth('login')
         return
       }
@@ -745,12 +761,12 @@ function App() {
       return
     }
 
-    if (link === 'Dashboard' && isAdmin) {
+    if (link === 'Dashboard' && effectiveIsAdmin) {
       navigate('/admin')
       return
     }
 
-    if (!currentUser) {
+    if (!effectiveUser) {
       openAuth('login')
       return
     }
@@ -1457,8 +1473,8 @@ function App() {
     <div className="app-shell">
       <Navbar
         links={navLinks}
-        user={currentUser}
-        isAdmin={isAdmin}
+        user={effectiveUser}
+        isAdmin={effectiveIsAdmin}
         onOpenAuth={openAuth}
         onLogout={handleLogout}
         onNavClick={handleNavClick}
@@ -1473,11 +1489,11 @@ function App() {
               <Courses
                 resources={uploadedResources}
                 courseCategories={courseCategories}
-                userPreferences={currentUser?.preferences}
-                currentUser={currentUser}
+                userPreferences={effectiveUser?.preferences}
+                currentUser={effectiveUser}
                 courseRatingsByUsername={courseRatingsByUsername}
                 resourceProgress={
-                  currentUser?.username ? courseProgressByUsername[currentUser.username] ?? {} : {}
+                  effectiveUser?.username ? courseProgressByUsername[effectiveUser.username] ?? {} : {}
                 }
                 onResourceView={handleMarkCourseViewed}
                 onResourceDownload={handleMarkCourseDownloaded}
@@ -1500,6 +1516,17 @@ function App() {
                     adminUsersLoading={adminUsersLoading}
                     adminUsersError={adminUsersError}
                     resources={uploadedResources}
+                    roleMode={adminViewMode}
+                    onToggleRole={() => {
+                      setAdminViewMode((prev) => prev === 'admin' ? 'user' : 'admin')
+                      if (adminViewMode !== 'user' && !currentUser && !adminPreviewUser) {
+                        setAdminPreviewUser({
+                          username: 'Preview User',
+                          email: 'preview@learnsys.local',
+                          preferences: sanitizePreferences({ categories: [], subcategories: [] }),
+                        })
+                      }
+                    }}
                     onAddCourseCategory={handleAddCourseCategory}
                     onRenameCourseCategory={handleRenameCourseCategory}
                     onDeleteCourseCategory={handleDeleteCourseCategory}
@@ -1527,8 +1554,8 @@ function App() {
             path="/quiz"
             element={
               <QuizPage
-                user={currentUser}
-                isAdmin={isAdmin}
+                user={effectiveUser}
+                isAdmin={effectiveIsAdmin}
                 quizCategories={quizCategories}
                 adminQuizzes={adminQuizzes}
                   adminQuizLoading={adminQuizLoading}
@@ -1552,12 +1579,12 @@ function App() {
                 redirectPath="/"
               >
                 <TypingPage
-                  user={currentUser}
-                  isAdmin={isAdmin}
+                  user={effectiveUser}
+                  isAdmin={effectiveIsAdmin}
                   typingSessionState={typingSessionState}
                   typingStats={
-                    currentUser
-                      ? typingStatsByUsername[currentUser.username] ?? defaultTypingStats()
+                    effectiveUser
+                      ? typingStatsByUsername[effectiveUser.username] ?? defaultTypingStats()
                       : defaultTypingStats()
                   }
                   onRequireAuth={() => openAuth('login')}
@@ -1576,16 +1603,16 @@ function App() {
                 redirectPath="/"
               >
                 <Dashboard
-                  user={currentUser}
-                  isAdmin={isAdmin}
+                  user={effectiveUser}
+                  isAdmin={effectiveIsAdmin}
                   resources={uploadedResources}
                   typingStats={
-                    currentUser
-                      ? typingStatsByUsername[currentUser.username] ?? defaultTypingStats()
+                    effectiveUser
+                      ? typingStatsByUsername[effectiveUser.username] ?? defaultTypingStats()
                       : defaultTypingStats()
                   }
                   courseProgress={
-                    currentUser?.username ? courseProgressByUsername[currentUser.username] ?? {} : {}
+                    effectiveUser?.username ? courseProgressByUsername[effectiveUser.username] ?? {} : {}
                   }
                   onEditPreferences={openPreferences}
                 />

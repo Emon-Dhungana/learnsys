@@ -166,6 +166,8 @@ function Admin({
   adminUsersLoading,
   adminUsersError,
   resources,
+  roleMode,
+  onToggleRole,
   onAddCourseCategory,
   onRenameCourseCategory,
   onDeleteCourseCategory,
@@ -666,6 +668,22 @@ function Admin({
                 </button>
               ))}
             </nav>
+
+            <div className="admin-role-toggle" aria-label="Admin role switch">
+              <span className="admin-role-label">Mode</span>
+              <button
+                type="button"
+                className={`admin-role-switch ${roleMode === 'user' ? 'is-user' : 'is-admin'}`}
+                onClick={onToggleRole}
+              >
+                <span className="admin-role-switch-track">
+                  <span className="admin-role-switch-thumb" />
+                </span>
+                <span className="admin-role-switch-text">
+                  {roleMode === 'user' ? 'User View' : 'Admin View'}
+                </span>
+              </button>
+            </div>
 
             <button type="button" className="btn btn-light admin-logout-btn" onClick={handleAdminLogout}>
               Admin Logout

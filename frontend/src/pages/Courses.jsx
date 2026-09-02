@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import PdfViewer from '../components/PdfViewer'
 import { fetchPdfAsBlob, downloadPdf } from '../utils/pdfUtils'
 
 function Courses({
@@ -7,14 +6,10 @@ function Courses({
   courseCategories,
   userPreferences,
   resourceProgress,
-  onResourceView,
   onResourceDownload,
 }) {
   const [showAll, setShowAll] = useState(false)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('all')
-  const [pdfViewerOpen, setPdfViewerOpen] = useState(false)
-  const [selectedPdfUrl, setSelectedPdfUrl] = useState(null)
-  const [selectedPdfFileName, setSelectedPdfFileName] = useState(null)
 
   const categoryNames = courseCategories.map((item) => item.name)
 
@@ -99,29 +94,6 @@ function Courses({
     )
   }
 
-  const openPdfViewer = (resource) => {
-    const resourceUrl = getResourceUrl(resource)
-    setSelectedPdfUrl(resourceUrl)
-    setSelectedPdfFileName(resource.fileName)
-    setPdfViewerOpen(true)
-  }
-
-  const handleViewResource = (resource) => {
-    const resourceUrl = getResourceUrl(resource)
-    if (!resourceUrl || resourceUrl === '#') {
-      return
-    }
-
-    onResourceView?.(resource.id)
-
-    if (isPdfResource(resource)) {
-      openPdfViewer(resource)
-      return
-    }
-
-    window.open(resourceUrl, '_blank', 'noopener,noreferrer')
-  }
-
   const handleDownloadResource = async (resource) => {
     const resourceUrl = getResourceUrl(resource)
     if (!resourceUrl || resourceUrl === '#') {
@@ -131,10 +103,21 @@ function Courses({
     onResourceDownload?.(resource.id)
 
     try {
-      const blob = await fetchPdfAsBlob(resourceUrl)
-      downloadPdf(blob, resource.fileName)
+      if (isPdfResource(resource)) {
+        const blob = await fetchPdfAsBlob(resourceUrl)
+        downloadPdf(blob, resource.fileName)
+        return
+      }
+
+      const link = document.createElement('a')
+      link.href = resourceUrl
+      link.download = resource.fileName || 'document'
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
     } catch (error) {
-      // Fallback to direct download
       const link = document.createElement('a')
       link.href = resourceUrl
       link.download = resource.fileName || 'document'
@@ -148,13 +131,6 @@ function Courses({
 
   return (
     <>
-      <PdfViewer
-        pdfUrl={selectedPdfUrl}
-        fileName={selectedPdfFileName}
-        isOpen={pdfViewerOpen}
-        onClose={() => setPdfViewerOpen(false)}
-      />
-
       <section className="courses-page" aria-labelledby="courses-heading">
       <header className="courses-hero">
         <p className="courses-tag">Learning Resources</p>
@@ -230,16 +206,6 @@ function Courses({
               ) : null}
 
               <div className="courses-toolbar">
-                <button
-                  type="button"
-                  className="btn btn-primary course-action"
-                  onClick={() => {
-                    handleViewResource(resource)
-                  }}
-                >
-                  View
-                </button>
-
                 <button
                   type="button"
                   className="btn btn-light course-action"

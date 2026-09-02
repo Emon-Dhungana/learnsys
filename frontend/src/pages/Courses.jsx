@@ -6,7 +6,10 @@ function Courses({
   courseCategories,
   userPreferences,
   resourceProgress,
+  courseRatingsByUsername,
+  currentUser,
   onResourceDownload,
+  onRateCourse,
 }) {
   const [showAll, setShowAll] = useState(false)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('all')
@@ -50,14 +53,52 @@ function Courses({
     return [...preferredResources, ...nonPreferred]
   }, [categoryFilteredResources, hasPreferences, preferredResources])
 
-  const visibleResources = hasPreferences && !showAll ? preferredResources : prioritizedResources
+  const getUserRatingForResource = (resourceId) => {
+    if (!currentUser?.username) {
+      return 0
+    }
+
+    return courseRatingsByUsername?.[currentUser.username]?.[resourceId] ?? 0
+  }
+
+  const getAverageRating = (resourceId) => {
+    const ratings = Object.values(courseRatingsByUsername ?? {}).flatMap((userRatings) =>
+      userRatings?.[resourceId] != null ? [Number(userRatings[resourceId])] : [],
+    )
+
+    if (ratings.length === 0) {
+      return 0
+    }
+
+    return ratings.reduce((sum, value) => sum + value, 0) / ratings.length
+  }
+
+  const getRecommendationScore = (resource) => {
+    const categoryBoost = hasPreferences
+      ? preferredResources.some((item) => item.id === resource.id)
+        ? 5
+        : 0
+      : 0
+
+    const averageRating = getAverageRating(resource.id)
+    const ratingBoost = averageRating * 2
+    const userRatingBoost = getUserRatingForResource(resource.id) * 2
+
+    return categoryBoost + ratingBoost + userRatingBoost
+  }
+
+  const rankedResources = useMemo(() => {
+    return [...resources].sort((a, b) => getRecommendationScore(b) - getRecommendationScore(a))
+  }, [resources, hasPreferences, preferredResources, courseRatingsByUsername, currentUser])
+
+  const visibleResources = hasPreferences && !showAll ? preferredResources : rankedResources
 
   const isRecommended = (resource) => {
-    if (!hasPreferences) {
+    if (!hasPreferences && getAverageRating(resource.id) < 4) {
       return false
     }
 
-    return preferredResources.some((item) => item.id === resource.id)
+    return preferredResources.some((item) => item.id === resource.id) || getAverageRating(resource.id) >= 4
   }
 
   const getProgressStatus = (resourceId) => {
@@ -127,6 +168,32 @@ function Courses({
       link.click()
       document.body.removeChild(link)
     }
+  }
+
+  const renderStars = (resource) => {
+    const currentRating = getUserRatingForResource(resource.id)
+
+    return (
+      <div className="course-rating" aria-label={`Rate ${resource.title}`}>
+        {[1, 2, 3, 4, 5].map((value) => (
+          <button
+            key={value}
+            type="button"
+            className={`rating-star ${value <= currentRating ? 'is-active' : ''}`}
+            onClick={() => onRateCourse?.(resource.id, value)}
+            aria-label={`Rate ${value} out of 5`}
+            title={`Rate ${value} out of 5`}
+          >
+            ★
+          </button>
+        ))}
+        <span className="rating-average">
+          {getAverageRating(resource.id) > 0
+            ? `${getAverageRating(resource.id).toFixed(1)} avg`
+            : 'No ratings yet'}
+        </span>
+      </div>
+    )
   }
 
   return (
@@ -204,6 +271,8 @@ function Courses({
                   <span>Status:</span> {getProgressStatus(resource.id)}
                 </p>
               ) : null}
+
+              {renderStars(resource)}
 
               <div className="courses-toolbar">
                 <button

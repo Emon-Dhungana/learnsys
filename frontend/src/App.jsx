@@ -139,6 +139,7 @@ function App() {
   const uploadedResourcesStorageKey = 'learnsys_uploaded_resources'
   const typingStatsStorageKey = 'learnsys_typing_stats'
   const courseProgressStorageKey = 'learnsys_course_progress'
+  const courseRatingsStorageKey = 'learnsys_course_ratings'
 
   const readStoredUser = () => {
     try {
@@ -268,6 +269,9 @@ function App() {
   const [courseProgressByUsername, setCourseProgressByUsername] = useState(() =>
     readStoredObject(courseProgressStorageKey, {}),
   )
+  const [courseRatingsByUsername, setCourseRatingsByUsername] = useState(() =>
+    readStoredObject(courseRatingsStorageKey, {}),
+  )
   const restoredUserStateForRef = useRef(null)
   const [uploadedResources, setUploadedResources] = useState(() =>
     readStoredArray(uploadedResourcesStorageKey),
@@ -338,6 +342,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem(courseProgressStorageKey, JSON.stringify(courseProgressByUsername))
   }, [courseProgressByUsername])
+
+  useEffect(() => {
+    localStorage.setItem(courseRatingsStorageKey, JSON.stringify(courseRatingsByUsername))
+  }, [courseRatingsByUsername])
 
   useEffect(() => {
     let isCancelled = false
@@ -1106,6 +1114,26 @@ function App() {
     })
   }
 
+  const handleRateCourse = (resourceId, rating) => {
+    if (!currentUser?.username || !resourceId) {
+      return
+    }
+
+    const nextRating = Math.min(5, Math.max(1, Number(rating) || 1))
+
+    setCourseRatingsByUsername((prev) => {
+      const currentRatings = prev[currentUser.username] ?? {}
+
+      return {
+        ...prev,
+        [currentUser.username]: {
+          ...currentRatings,
+          [resourceId]: nextRating,
+        },
+      }
+    })
+  }
+
   const handleAddCourseCategory = (name) => {
     const nextCategory = {
       id: crypto.randomUUID(),
@@ -1446,11 +1474,14 @@ function App() {
                 resources={uploadedResources}
                 courseCategories={courseCategories}
                 userPreferences={currentUser?.preferences}
+                currentUser={currentUser}
+                courseRatingsByUsername={courseRatingsByUsername}
                 resourceProgress={
                   currentUser?.username ? courseProgressByUsername[currentUser.username] ?? {} : {}
                 }
                 onResourceView={handleMarkCourseViewed}
                 onResourceDownload={handleMarkCourseDownloaded}
+                onRateCourse={handleRateCourse}
               />
             }
           />

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import PdfViewer from '../components/PdfViewer'
 import { fetchPdfAsBlob, downloadPdf } from '../utils/pdfUtils'
 
 function Courses({
@@ -8,11 +9,15 @@ function Courses({
   resourceProgress,
   courseRatingsByUsername,
   currentUser,
+  onResourceView,
   onResourceDownload,
   onRateCourse,
 }) {
   const [showAll, setShowAll] = useState(false)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('all')
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false)
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState(null)
+  const [selectedPdfFileName, setSelectedPdfFileName] = useState(null)
 
   const categoryNames = courseCategories.map((item) => item.name)
 
@@ -135,6 +140,29 @@ function Courses({
     )
   }
 
+  const openPdfViewer = (resource) => {
+    const resourceUrl = getResourceUrl(resource)
+    setSelectedPdfUrl(resourceUrl)
+    setSelectedPdfFileName(resource.fileName)
+    setPdfViewerOpen(true)
+  }
+
+  const handleViewResource = (resource) => {
+    const resourceUrl = getResourceUrl(resource)
+    if (!resourceUrl || resourceUrl === '#') {
+      return
+    }
+
+    onResourceView?.(resource.id)
+
+    if (isPdfResource(resource)) {
+      openPdfViewer(resource)
+      return
+    }
+
+    window.open(resourceUrl, '_blank', 'noopener,noreferrer')
+  }
+
   const handleDownloadResource = async (resource) => {
     const resourceUrl = getResourceUrl(resource)
     if (!resourceUrl || resourceUrl === '#') {
@@ -198,6 +226,13 @@ function Courses({
 
   return (
     <>
+      <PdfViewer
+        pdfUrl={selectedPdfUrl}
+        fileName={selectedPdfFileName}
+        isOpen={pdfViewerOpen}
+        onClose={() => setPdfViewerOpen(false)}
+      />
+
       <section className="courses-page" aria-labelledby="courses-heading">
       <header className="courses-hero">
         <p className="courses-tag">Learning Resources</p>
@@ -275,6 +310,14 @@ function Courses({
               {renderStars(resource)}
 
               <div className="courses-toolbar">
+                <button
+                  type="button"
+                  className="btn btn-primary course-action"
+                  onClick={() => handleViewResource(resource)}
+                >
+                  View
+                </button>
+
                 <button
                   type="button"
                   className="btn btn-light course-action"

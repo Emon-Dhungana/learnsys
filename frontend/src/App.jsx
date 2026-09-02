@@ -720,14 +720,21 @@ function App() {
     navigate('/')
   }
 
-  const effectiveUser = adminViewMode === 'user'
-    ? currentUser ?? adminPreviewUser ?? {
-        username: 'Preview User',
-        email: 'preview@learnsys.local',
-        preferences: sanitizePreferences({ categories: [], subcategories: [] }),
-      }
-    : currentUser
+  const previewUser = {
+    username: 'Preview User',
+    email: 'preview@learnsys.local',
+    preferences: sanitizePreferences({ categories: [], subcategories: [] }),
+  }
 
+  const getSessionUser = () => {
+    if (adminViewMode === 'user') {
+      return currentUser ?? adminPreviewUser ?? previewUser
+    }
+
+    return currentUser
+  }
+
+  const effectiveUser = getSessionUser()
   const effectiveIsAdmin = adminViewMode === 'admin' && isAdmin
 
   const handleNavClick = (link) => {
@@ -763,6 +770,11 @@ function App() {
 
     if (link === 'Dashboard' && effectiveIsAdmin) {
       navigate('/admin')
+      return
+    }
+
+    if (adminViewMode === 'user' && !currentUser) {
+      navigate('/dashboard')
       return
     }
 
@@ -982,7 +994,8 @@ function App() {
   }
 
   const handleSaveUserQuiz = (quizInput) => {
-    if (!currentUser) {
+    const sessionUser = getSessionUser()
+    if (!sessionUser?.username) {
       return
     }
 
@@ -1003,7 +1016,7 @@ function App() {
 
     const newQuiz = {
       id: crypto.randomUUID(),
-      owner: currentUser.username,
+      owner: sessionUser.username,
       title: quizInput.title,
       questions: quizInput.questions,
     }
@@ -1016,12 +1029,13 @@ function App() {
   }
 
   const handleSaveTypingResult = (result) => {
-    if (!currentUser) {
+    const sessionUser = getSessionUser()
+    if (!sessionUser?.username) {
       return
     }
 
     setTypingStatsByUsername((prev) => {
-      const current = prev[currentUser.username] ?? defaultTypingStats()
+      const current = prev[sessionUser.username] ?? defaultTypingStats()
 
       const nextWeakKeyCounts = { ...current.weakKeyCounts }
       Object.entries(result.weakKeyCounts ?? {}).forEach(([key, count]) => {
@@ -1064,7 +1078,7 @@ function App() {
 
       return {
         ...prev,
-        [currentUser.username]: {
+        [sessionUser.username]: {
           history: nextHistory,
           weakKeyCounts: nextWeakKeyCounts,
           incorrectPatterns: nextIncorrectPatterns,
@@ -1075,12 +1089,13 @@ function App() {
   }
 
   const handleMarkCourseViewed = (resourceId) => {
-    if (!currentUser?.username || !resourceId) {
+    const sessionUser = getSessionUser()
+    if (!sessionUser?.username || !resourceId) {
       return
     }
 
     setCourseProgressByUsername((prev) => {
-      const currentProgress = prev[currentUser.username] ?? {}
+      const currentProgress = prev[sessionUser.username] ?? {}
       const currentResourceProgress = currentProgress[resourceId] ?? {
         viewed: false,
         downloaded: false,
@@ -1090,7 +1105,7 @@ function App() {
 
       return {
         ...prev,
-        [currentUser.username]: {
+        [sessionUser.username]: {
           ...currentProgress,
           [resourceId]: {
             ...currentResourceProgress,
@@ -1103,12 +1118,13 @@ function App() {
   }
 
   const handleMarkCourseDownloaded = (resourceId) => {
-    if (!currentUser?.username || !resourceId) {
+    const sessionUser = getSessionUser()
+    if (!sessionUser?.username || !resourceId) {
       return
     }
 
     setCourseProgressByUsername((prev) => {
-      const currentProgress = prev[currentUser.username] ?? {}
+      const currentProgress = prev[sessionUser.username] ?? {}
       const currentResourceProgress = currentProgress[resourceId] ?? {
         viewed: false,
         downloaded: false,
@@ -1118,7 +1134,7 @@ function App() {
 
       return {
         ...prev,
-        [currentUser.username]: {
+        [sessionUser.username]: {
           ...currentProgress,
           [resourceId]: {
             ...currentResourceProgress,
@@ -1131,18 +1147,19 @@ function App() {
   }
 
   const handleRateCourse = (resourceId, rating) => {
-    if (!currentUser?.username || !resourceId) {
+    const sessionUser = getSessionUser()
+    if (!sessionUser?.username || !resourceId) {
       return
     }
 
     const nextRating = Math.min(5, Math.max(1, Number(rating) || 1))
 
     setCourseRatingsByUsername((prev) => {
-      const currentRatings = prev[currentUser.username] ?? {}
+      const currentRatings = prev[sessionUser.username] ?? {}
 
       return {
         ...prev,
-        [currentUser.username]: {
+        [sessionUser.username]: {
           ...currentRatings,
           [resourceId]: nextRating,
         },
@@ -1518,14 +1535,21 @@ function App() {
                     resources={uploadedResources}
                     roleMode={adminViewMode}
                     onToggleRole={() => {
-                      setAdminViewMode((prev) => prev === 'admin' ? 'user' : 'admin')
-                      if (adminViewMode !== 'user' && !currentUser && !adminPreviewUser) {
-                        setAdminPreviewUser({
-                          username: 'Preview User',
-                          email: 'preview@learnsys.local',
-                          preferences: sanitizePreferences({ categories: [], subcategories: [] }),
-                        })
-                      }
+                      setAdminViewMode((prev) => {
+                        const nextMode = prev === 'admin' ? 'user' : 'admin'
+
+                        if (nextMode === 'user' && !currentUser) {
+                          setAdminPreviewUser((prevPreview) =>
+                            prevPreview ?? {
+                              username: 'Preview User',
+                              email: 'preview@learnsys.local',
+                              preferences: sanitizePreferences({ categories: [], subcategories: [] }),
+                            },
+                          )
+                        }
+
+                        return nextMode
+                      })
                     }}
                     onAddCourseCategory={handleAddCourseCategory}
                     onRenameCourseCategory={handleRenameCourseCategory}

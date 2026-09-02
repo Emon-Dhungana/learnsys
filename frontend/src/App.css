@@ -2102,6 +2102,44 @@ main {
   font-weight: 600;
 }
 
+.course-rating {
+  margin-top: 0.8rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+
+.rating-star {
+  border: none;
+  background: transparent;
+  color: #c7d2e0;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.rating-star:hover,
+.rating-star:focus-visible {
+  color: #f7c75a;
+  transform: scale(1.08);
+  outline: none;
+}
+
+.rating-star.is-active {
+  color: #f4b942;
+  text-shadow: 0 0 12px rgba(244, 185, 66, 0.45);
+}
+
+.rating-average {
+  margin-left: 0.35rem;
+  color: var(--ink-700);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .course-action {
   margin-top: 0.8rem;
   text-decoration: none;

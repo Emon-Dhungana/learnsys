@@ -1,9 +1,20 @@
+const isPdfLikeUrl = (url = '') => {
+  const normalizedUrl = url.toLowerCase()
+
+  return (
+    normalizedUrl.endsWith('.pdf') ||
+    normalizedUrl.includes('.pdf?') ||
+    normalizedUrl.includes('%2epdf') ||
+    normalizedUrl.includes('/pdf')
+  )
+}
+
 export const fetchPdfAsBlob = async (url) => {
   try {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Accept': 'application/pdf',
+        Accept: 'application/pdf, application/octet-stream, */*',
       },
       mode: 'cors',
       credentials: 'omit',
@@ -14,9 +25,15 @@ export const fetchPdfAsBlob = async (url) => {
     }
 
     const blob = await response.blob()
-    
-    // Verify it's actually a PDF
-    if (!blob.type.includes('pdf') && !blob.type.includes('octet-stream')) {
+    const mimeType = (response.headers.get('Content-Type') || blob.type || '').toLowerCase()
+
+    const isPdfBlob =
+      mimeType.includes('pdf') ||
+      mimeType.includes('octet-stream') ||
+      mimeType === '' ||
+      isPdfLikeUrl(url)
+
+    if (!isPdfBlob) {
       throw new Error('Downloaded file is not a PDF')
     }
 
@@ -29,18 +46,22 @@ export const fetchPdfAsBlob = async (url) => {
 
 export const downloadPdf = (blob, fileName) => {
   const objectUrl = URL.createObjectURL(blob)
-  
+
   try {
+    const safeFileName = fileName?.trim() ? fileName : 'document.pdf'
+    const normalizedName = safeFileName.toLowerCase().endsWith('.pdf')
+      ? safeFileName
+      : `${safeFileName}.pdf`
+
     const link = document.createElement('a')
     link.href = objectUrl
-    link.download = fileName || 'document.pdf'
+    link.download = normalizedName
     link.style.display = 'none'
-    
+
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    
-    // Clean up the object URL after download
+
     setTimeout(() => {
       URL.revokeObjectURL(objectUrl)
     }, 100)

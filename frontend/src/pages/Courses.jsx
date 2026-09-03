@@ -83,8 +83,10 @@ function Courses({
   }
 
   const rankedResources = useMemo(() => {
-    return [...resources].sort((a, b) => getRecommendationScore(b) - getRecommendationScore(a))
-  }, [resources, hasPreferences, preferredResources, courseRatingsByUsername, currentUser])
+    return [...categoryFilteredResources].sort(
+      (a, b) => getRecommendationScore(b) - getRecommendationScore(a),
+    )
+  }, [categoryFilteredResources, hasPreferences, preferredResources, courseRatingsByUsername, currentUser])
 
   const visibleResources = hasPreferences && !showAll ? preferredResources : rankedResources
 

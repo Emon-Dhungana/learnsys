@@ -48,16 +48,6 @@ function Courses({
     })
   }, [categoryFilteredResources, hasPreferences, userPreferences])
 
-  const prioritizedResources = useMemo(() => {
-    if (!hasPreferences) {
-      return categoryFilteredResources
-    }
-
-    const preferredIds = new Set(preferredResources.map((item) => item.id))
-    const nonPreferred = categoryFilteredResources.filter((item) => !preferredIds.has(item.id))
-    return [...preferredResources, ...nonPreferred]
-  }, [categoryFilteredResources, hasPreferences, preferredResources])
-
   const getUserRatingForResource = (resourceId) => {
     if (!currentUser?.username) {
       return 0
@@ -186,7 +176,7 @@ function Courses({
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-    } catch (error) {
+    } catch {
       const link = document.createElement('a')
       link.href = resourceUrl
       link.download = resource.fileName || 'document'

@@ -252,8 +252,6 @@ function App() {
   const [authView, setAuthView] = useState('login')
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [adminViewMode, setAdminViewMode] = useState('admin')
-  const [adminPreviewUser, setAdminPreviewUser] = useState(null)
   const [isSessionRestored, setIsSessionRestored] = useState(false)
   const [adminAuthError, setAdminAuthError] = useState('')
   const [adminQuizzes, setAdminQuizzes] = useState([])
@@ -672,8 +670,6 @@ function App() {
   const handleLogout = () => {
     setCurrentUser(null)
     setIsAdmin(false)
-    setAdminViewMode('admin')
-    setAdminPreviewUser(null)
     setIsPreferencesOpen(false)
     restoredUserStateForRef.current = null
     localStorage.removeItem(userStorageKey)
@@ -714,28 +710,9 @@ function App() {
 
   const handleAdminLogout = () => {
     setIsAdmin(false)
-    setAdminViewMode('admin')
-    setAdminPreviewUser(null)
     localStorage.removeItem(adminStorageKey)
     navigate('/')
   }
-
-  const previewUser = {
-    username: 'Preview User',
-    email: 'preview@learnsys.local',
-    preferences: sanitizePreferences({ categories: [], subcategories: [] }),
-  }
-
-  const getSessionUser = () => {
-    if (adminViewMode === 'user') {
-      return currentUser ?? adminPreviewUser ?? previewUser
-    }
-
-    return currentUser
-  }
-
-  const effectiveUser = getSessionUser()
-  const effectiveIsAdmin = adminViewMode === 'admin' && isAdmin
 
   const handleNavClick = (link) => {
     if (link === 'Home') {
@@ -749,7 +726,7 @@ function App() {
     }
 
     if (link === 'Quiz') {
-      if (!effectiveUser && !effectiveIsAdmin) {
+      if (!currentUser && !isAdmin) {
         openAuth('login')
         return
       }
@@ -759,7 +736,7 @@ function App() {
     }
 
     if (link === 'Typing') {
-      if (!effectiveUser && !effectiveIsAdmin) {
+      if (!currentUser && !isAdmin) {
         openAuth('login')
         return
       }
@@ -768,17 +745,12 @@ function App() {
       return
     }
 
-    if (link === 'Dashboard' && effectiveIsAdmin) {
+    if (link === 'Dashboard' && isAdmin) {
       navigate('/admin')
       return
     }
 
-    if (adminViewMode === 'user' && !currentUser) {
-      navigate('/dashboard')
-      return
-    }
-
-    if (!effectiveUser) {
+    if (!currentUser) {
       openAuth('login')
       return
     }
@@ -994,8 +966,7 @@ function App() {
   }
 
   const handleSaveUserQuiz = (quizInput) => {
-    const sessionUser = getSessionUser()
-    if (!sessionUser?.username) {
+    if (!currentUser) {
       return
     }
 
@@ -1016,7 +987,7 @@ function App() {
 
     const newQuiz = {
       id: crypto.randomUUID(),
-      owner: sessionUser.username,
+      owner: currentUser.username,
       title: quizInput.title,
       questions: quizInput.questions,
     }
@@ -1029,13 +1000,12 @@ function App() {
   }
 
   const handleSaveTypingResult = (result) => {
-    const sessionUser = getSessionUser()
-    if (!sessionUser?.username) {
+    if (!currentUser) {
       return
     }
 
     setTypingStatsByUsername((prev) => {
-      const current = prev[sessionUser.username] ?? defaultTypingStats()
+      const current = prev[currentUser.username] ?? defaultTypingStats()
 
       const nextWeakKeyCounts = { ...current.weakKeyCounts }
       Object.entries(result.weakKeyCounts ?? {}).forEach(([key, count]) => {
@@ -1078,7 +1048,7 @@ function App() {
 
       return {
         ...prev,
-        [sessionUser.username]: {
+        [currentUser.username]: {
           history: nextHistory,
           weakKeyCounts: nextWeakKeyCounts,
           incorrectPatterns: nextIncorrectPatterns,
@@ -1089,13 +1059,12 @@ function App() {
   }
 
   const handleMarkCourseViewed = (resourceId) => {
-    const sessionUser = getSessionUser()
-    if (!sessionUser?.username || !resourceId) {
+    if (!currentUser?.username || !resourceId) {
       return
     }
 
     setCourseProgressByUsername((prev) => {
-      const currentProgress = prev[sessionUser.username] ?? {}
+      const currentProgress = prev[currentUser.username] ?? {}
       const currentResourceProgress = currentProgress[resourceId] ?? {
         viewed: false,
         downloaded: false,
@@ -1105,7 +1074,7 @@ function App() {
 
       return {
         ...prev,
-        [sessionUser.username]: {
+        [currentUser.username]: {
           ...currentProgress,
           [resourceId]: {
             ...currentResourceProgress,
@@ -1118,13 +1087,12 @@ function App() {
   }
 
   const handleMarkCourseDownloaded = (resourceId) => {
-    const sessionUser = getSessionUser()
-    if (!sessionUser?.username || !resourceId) {
+    if (!currentUser?.username || !resourceId) {
       return
     }
 
     setCourseProgressByUsername((prev) => {
-      const currentProgress = prev[sessionUser.username] ?? {}
+      const currentProgress = prev[currentUser.username] ?? {}
       const currentResourceProgress = currentProgress[resourceId] ?? {
         viewed: false,
         downloaded: false,
@@ -1134,7 +1102,7 @@ function App() {
 
       return {
         ...prev,
-        [sessionUser.username]: {
+        [currentUser.username]: {
           ...currentProgress,
           [resourceId]: {
             ...currentResourceProgress,
@@ -1147,19 +1115,18 @@ function App() {
   }
 
   const handleRateCourse = (resourceId, rating) => {
-    const sessionUser = getSessionUser()
-    if (!sessionUser?.username || !resourceId) {
+    if (!currentUser?.username || !resourceId) {
       return
     }
 
     const nextRating = Math.min(5, Math.max(1, Number(rating) || 1))
 
     setCourseRatingsByUsername((prev) => {
-      const currentRatings = prev[sessionUser.username] ?? {}
+      const currentRatings = prev[currentUser.username] ?? {}
 
       return {
         ...prev,
-        [sessionUser.username]: {
+        [currentUser.username]: {
           ...currentRatings,
           [resourceId]: nextRating,
         },
@@ -1490,8 +1457,8 @@ function App() {
     <div className="app-shell">
       <Navbar
         links={navLinks}
-        user={effectiveUser}
-        isAdmin={effectiveIsAdmin}
+        user={currentUser}
+        isAdmin={isAdmin}
         onOpenAuth={openAuth}
         onLogout={handleLogout}
         onNavClick={handleNavClick}
@@ -1506,11 +1473,11 @@ function App() {
               <Courses
                 resources={uploadedResources}
                 courseCategories={courseCategories}
-                userPreferences={effectiveUser?.preferences}
-                currentUser={effectiveUser}
+                userPreferences={currentUser?.preferences}
+                currentUser={currentUser}
                 courseRatingsByUsername={courseRatingsByUsername}
                 resourceProgress={
-                  effectiveUser?.username ? courseProgressByUsername[effectiveUser.username] ?? {} : {}
+                  currentUser?.username ? courseProgressByUsername[currentUser.username] ?? {} : {}
                 }
                 onResourceView={handleMarkCourseViewed}
                 onResourceDownload={handleMarkCourseDownloaded}
@@ -1533,24 +1500,6 @@ function App() {
                     adminUsersLoading={adminUsersLoading}
                     adminUsersError={adminUsersError}
                     resources={uploadedResources}
-                    roleMode={adminViewMode}
-                    onToggleRole={() => {
-                      setAdminViewMode((prev) => {
-                        const nextMode = prev === 'admin' ? 'user' : 'admin'
-
-                        if (nextMode === 'user' && !currentUser) {
-                          setAdminPreviewUser((prevPreview) =>
-                            prevPreview ?? {
-                              username: 'Preview User',
-                              email: 'preview@learnsys.local',
-                              preferences: sanitizePreferences({ categories: [], subcategories: [] }),
-                            },
-                          )
-                        }
-
-                        return nextMode
-                      })
-                    }}
                     onAddCourseCategory={handleAddCourseCategory}
                     onRenameCourseCategory={handleRenameCourseCategory}
                     onDeleteCourseCategory={handleDeleteCourseCategory}
@@ -1578,8 +1527,8 @@ function App() {
             path="/quiz"
             element={
               <QuizPage
-                user={effectiveUser}
-                isAdmin={effectiveIsAdmin}
+                user={currentUser}
+                isAdmin={isAdmin}
                 quizCategories={quizCategories}
                 adminQuizzes={adminQuizzes}
                   adminQuizLoading={adminQuizLoading}
@@ -1603,12 +1552,12 @@ function App() {
                 redirectPath="/"
               >
                 <TypingPage
-                  user={effectiveUser}
-                  isAdmin={effectiveIsAdmin}
+                  user={currentUser}
+                  isAdmin={isAdmin}
                   typingSessionState={typingSessionState}
                   typingStats={
-                    effectiveUser
-                      ? typingStatsByUsername[effectiveUser.username] ?? defaultTypingStats()
+                    currentUser
+                      ? typingStatsByUsername[currentUser.username] ?? defaultTypingStats()
                       : defaultTypingStats()
                   }
                   onRequireAuth={() => openAuth('login')}
@@ -1627,20 +1576,18 @@ function App() {
                 redirectPath="/"
               >
                 <Dashboard
-                  user={effectiveUser}
-                  isAdmin={effectiveIsAdmin}
+                  user={currentUser}
+                  isAdmin={isAdmin}
                   resources={uploadedResources}
                   typingStats={
-                    effectiveUser
-                      ? typingStatsByUsername[effectiveUser.username] ?? defaultTypingStats()
+                    currentUser
+                      ? typingStatsByUsername[currentUser.username] ?? defaultTypingStats()
                       : defaultTypingStats()
                   }
                   courseProgress={
-                    effectiveUser?.username ? courseProgressByUsername[effectiveUser.username] ?? {} : {}
+                    currentUser?.username ? courseProgressByUsername[currentUser.username] ?? {} : {}
                   }
                   onEditPreferences={openPreferences}
-                  roleMode={adminViewMode}
-                  onToggleRole={() => setAdminViewMode('admin')}
                 />
               </ProtectedRoute>
             }

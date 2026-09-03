@@ -166,8 +166,6 @@ function Admin({
   adminUsersLoading,
   adminUsersError,
   resources,
-  roleMode,
-  onToggleRole,
   onAddCourseCategory,
   onRenameCourseCategory,
   onDeleteCourseCategory,
@@ -188,7 +186,6 @@ function Admin({
   onAdminLogout,
 }) {
   const [activeTab, setActiveTab] = useState('overview')
-  const isPreviewUserMode = roleMode === 'user'
 
   const [courseCategoryName, setCourseCategoryName] = useState('')
   const [courseCategoryError, setCourseCategoryError] = useState('')
@@ -663,34 +660,12 @@ function Admin({
                   key={tab.id}
                   type="button"
                   className={`admin-nav-tab ${activeTab === tab.id ? 'is-active' : ''}`}
-                  onClick={() => {
-                    if (!isPreviewUserMode) {
-                      setActiveTab(tab.id)
-                    }
-                  }}
-                  disabled={isPreviewUserMode}
-                  aria-disabled={isPreviewUserMode}
+                  onClick={() => setActiveTab(tab.id)}
                 >
                   {tab.label}
                 </button>
               ))}
             </nav>
-
-            <div className="admin-role-toggle" aria-label="Admin role switch">
-              <span className="admin-role-label">Mode</span>
-              <button
-                type="button"
-                className={`admin-role-switch ${roleMode === 'user' ? 'is-user' : 'is-admin'}`}
-                onClick={onToggleRole}
-              >
-                <span className="admin-role-switch-track">
-                  <span className="admin-role-switch-thumb" />
-                </span>
-                <span className="admin-role-switch-text">
-                  {roleMode === 'user' ? 'User View' : 'Admin View'}
-                </span>
-              </button>
-            </div>
 
             <button type="button" className="btn btn-light admin-logout-btn" onClick={handleAdminLogout}>
               Admin Logout

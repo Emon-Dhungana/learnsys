@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { uploadToCloudinary } from '../utils/uploadToCloudinary'
-import { getQuestionDuplicateKey, getWorksheetNames, parseQuizFile } from '../utils/quizImport'
+import { getWorksheetNames, parseQuizFile } from '../utils/quizImport'
 
 const ADMIN_TABS = [
   { id: 'overview', label: 'Overview' },
@@ -160,9 +160,12 @@ function CategoryManagerSection({
 function Admin({
   courseCategories,
   quizCategories,
-  adminQuizzes,
   adminQuizLoading,
   adminQuizError,
+  adminQuestionPage,
+  adminQuestionTotal,
+  adminQuestionPageLoading,
+  adminQuestionPageError,
   adminUsers,
   adminUsersLoading,
   adminUsersError,
@@ -180,7 +183,9 @@ function Admin({
   onAddAdminQuestion,
   onImportAdminQuestions,
   onDeleteAdminQuestion,
-  onLoadAdminQuizzes,
+  onUpdateAdminQuestion,
+  onLoadAdminQuestionPage,
+  onFindAdminQuestionDuplicates,
   onLoadAdminUsers,
   onDeleteRegisteredUser,
   onUploadResource,
@@ -241,15 +246,34 @@ function Admin({
   const [importingQuestions, setImportingQuestions] = useState(false)
   const [importProgress, setImportProgress] = useState({ completed: 0, total: 0 })
   const [importSummary, setImportSummary] = useState(null)
+  const [questionSearch, setQuestionSearch] = useState('')
+  const [questionCategory, setQuestionCategory] = useState('')
+  const [questionSubcategory, setQuestionSubcategory] = useState('')
+  const [questionDateFilter, setQuestionDateFilter] = useState('all')
+  const [questionFromDate, setQuestionFromDate] = useState('')
+  const [questionToDate, setQuestionToDate] = useState('')
+  const [questionSort, setQuestionSort] = useState('newest')
+  const [questionPageSize, setQuestionPageSize] = useState(25)
+  const [questionPageNumber, setQuestionPageNumber] = useState(1)
+  const [questionPageHasMore, setQuestionPageHasMore] = useState(false)
+  const [questionPageCursors, setQuestionPageCursors] = useState([])
+  const [questionLastCursor, setQuestionLastCursor] = useState(null)
+  const [questionDetail, setQuestionDetail] = useState(null)
+  const [questionEditing, setQuestionEditing] = useState(null)
+  const [questionEditError, setQuestionEditError] = useState('')
+  const [importDuplicateCount, setImportDuplicateCount] = useState(0)
 
   const selectedCourseCategory = courseCategories.find((item) => item.id === uploadData.categoryId)
   const selectedQuizCategory = quizCategories.find((item) => item.id === questionData.categoryId)
   const selectedImportCategory = quizCategories.find((item) => item.id === importCategoryId)
+  const visibleImportDuplicateCount = importPreview && selectedImportCategory && importSubcategory
+    ? importDuplicateCount
+    : 0
   const totalCourses = new Set(
     resources.map((resource) => resource.title.trim().toLowerCase()),
   ).size
   const totalResources = resources.length
-  const totalQuizQuestions = adminQuizzes.length
+  const totalQuizQuestions = adminQuestionTotal
   const totalRegisteredUsers = adminUsers.length
 
   const filteredAdminUsers = useMemo(() => {
@@ -265,27 +289,130 @@ function Admin({
     })
   }, [adminUsers, userSearch])
 
-  const possibleImportDuplicates = useMemo(() => {
-    if (!importPreview || !selectedImportCategory || !importSubcategory) {
-      return 0
+  useEffect(() => {
+    let cancelled = false
+    const validRows = importPreview?.rows.filter((row) => row.valid) ?? []
+    if (!selectedImportCategory || !importSubcategory || !validRows.length) {
+      return undefined
     }
 
-    const existingKeys = new Set(
-      adminQuizzes
-        .filter((item) => item.category === selectedImportCategory.name && item.subcategory === importSubcategory)
-        .map((item) => getQuestionDuplicateKey(selectedImportCategory.name, importSubcategory, item.question)),
-    )
-    return importPreview.rows.filter(
-      (row) => row.valid && existingKeys.has(
-        getQuestionDuplicateKey(selectedImportCategory.name, importSubcategory, row.question),
-      ),
-    ).length
-  }, [adminQuizzes, importPreview, importSubcategory, selectedImportCategory])
+    onFindAdminQuestionDuplicates(selectedImportCategory.name, importSubcategory, validRows)
+      .then((count) => {
+        if (!cancelled) setImportDuplicateCount(count)
+      })
+      .catch(() => {
+        if (!cancelled) setImportDuplicateCount(0)
+      })
+
+    return () => { cancelled = true }
+  }, [importPreview, importSubcategory, onFindAdminQuestionDuplicates, selectedImportCategory])
+
+  const selectedQuestionCategory = quizCategories.find((item) => item.name === questionCategory)
+  const availableQuestionSubcategories = questionCategory
+    ? selectedQuestionCategory?.subcategories ?? []
+    : [...new Set(quizCategories.flatMap((item) => item.subcategories))]
+
+  const visibleQuestionPage = useMemo(() => {
+    const queryText = questionSearch.trim().toLowerCase()
+    if (!queryText) return adminQuestionPage
+    return adminQuestionPage.filter((item) => item.question.toLowerCase().includes(queryText))
+  }, [adminQuestionPage, questionSearch])
+
+  const loadQuestionPage = useCallback(async (cursor = null, pageNumber = 1) => {
+    if (pageNumber === 1) setQuestionPageCursors([])
+    const result = await onLoadAdminQuestionPage({
+      category: questionCategory,
+      subcategory: questionSubcategory,
+      dateFilter: questionDateFilter,
+      fromDate: questionFromDate,
+      toDate: questionToDate,
+      sort: questionSort,
+      pageSize: questionPageSize,
+      cursor,
+    })
+    setQuestionPageHasMore(result.hasMore)
+    setQuestionPageNumber(pageNumber)
+    setQuestionLastCursor(result.lastDoc)
+    return result
+  }, [onLoadAdminQuestionPage, questionCategory, questionDateFilter, questionFromDate, questionPageSize, questionSort, questionSubcategory, questionToDate])
 
   useEffect(() => {
-    onLoadAdminQuizzes()
     onLoadAdminUsers()
-  }, [onLoadAdminQuizzes, onLoadAdminUsers])
+  }, [onLoadAdminUsers])
+
+  useEffect(() => {
+    if (activeTab !== 'quizManagement') return
+    Promise.resolve().then(() => loadQuestionPage(null, 1))
+  }, [activeTab, loadQuestionPage])
+
+  const formatQuestionDate = (value) => {
+    const timestamp = value?.toDate ? value.toDate() : value ? new Date(value) : null
+    return timestamp && !Number.isNaN(timestamp.getTime())
+      ? timestamp.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+      : 'Unknown'
+  }
+
+  const clearQuestionFilters = () => {
+    setQuestionSearch('')
+    setQuestionCategory('')
+    setQuestionSubcategory('')
+    setQuestionDateFilter('all')
+    setQuestionFromDate('')
+    setQuestionToDate('')
+    setQuestionSort('newest')
+    setQuestionPageNumber(1)
+    setQuestionPageCursors([])
+    setQuestionLastCursor(null)
+  }
+
+  const goToNextQuestionPage = async () => {
+    const result = await loadQuestionPage(questionLastCursor, questionPageNumber + 1)
+    if (questionLastCursor && result.questions.length) {
+      setQuestionPageCursors((prev) => [...prev, questionLastCursor])
+    }
+  }
+
+  const goToPreviousQuestionPage = () => {
+    if (questionPageNumber <= 1) return
+    const previousCursor = questionPageCursors[questionPageNumber - 2] ?? null
+    loadQuestionPage(previousCursor, questionPageNumber - 1)
+  }
+
+  const startQuestionEdit = (item) => {
+    setQuestionEditing({
+      ...item,
+      options: { ...item.options },
+    })
+    setQuestionEditError('')
+    setQuestionDetail(null)
+  }
+
+  const submitQuestionEdit = async (event) => {
+    event.preventDefault()
+    if (!questionEditing?.question.trim() || !questionEditing.options.A.trim() || !questionEditing.options.B.trim() || !questionEditing.options.C.trim() || !questionEditing.options.D.trim()) {
+      setQuestionEditError('Question text and all four options are required.')
+      return
+    }
+
+    try {
+      await onUpdateAdminQuestion(questionEditing.id, {
+        question: questionEditing.question.trim(),
+        options: Object.fromEntries(Object.entries(questionEditing.options).map(([key, value]) => [key, value.trim()])),
+        correctAnswer: questionEditing.correctAnswer,
+        category: questionEditing.category,
+        subcategory: questionEditing.subcategory,
+      })
+      setQuestionEditing(null)
+      await loadQuestionPage(questionPageCursors[questionPageNumber - 1] ?? null, questionPageNumber)
+    } catch {
+      setQuestionEditError('Unable to update this question.')
+    }
+  }
+
+  const deleteQuestionAndRefresh = async (questionId) => {
+    await onDeleteAdminQuestion(questionId)
+    await loadQuestionPage(questionPageCursors[questionPageNumber - 1] ?? null, questionPageNumber)
+  }
 
   const formatMemberSince = (createdAtMs) => {
     if (!createdAtMs) {
@@ -598,6 +725,7 @@ function Admin({
         onProgress: (completed, total) => setImportProgress({ completed, total }),
       })
       setImportSummary({ ...result, total: rows.length })
+      await loadQuestionPage(null, 1)
     } catch {
       setImportError('Import failed. Please check the admin connection and try again.')
     } finally {
@@ -673,6 +801,7 @@ function Admin({
         category: selectedQuestionCategory.name,
         subcategory: questionData.subcategory.trim(),
       })
+      await loadQuestionPage(null, 1)
 
       setQuestionData({
         question: '',
@@ -1096,7 +1225,7 @@ function Admin({
                         <span>{importPreview.total} total</span>
                         <span className="is-valid">{importPreview.valid} valid</span>
                         <span className={importPreview.invalid ? 'is-invalid' : ''}>{importPreview.invalid} invalid</span>
-                        {possibleImportDuplicates ? <span className="is-warning">{possibleImportDuplicates} possible duplicates</span> : null}
+                        {visibleImportDuplicateCount ? <span className="is-warning">{visibleImportDuplicateCount} possible duplicates</span> : null}
                       </div>
 
                       {importPreview.invalid ? (
@@ -1111,7 +1240,7 @@ function Admin({
                         </label>
                       ) : null}
 
-                      {possibleImportDuplicates ? (
+                      {visibleImportDuplicateCount ? (
                         <label className="admin-import-checkbox">
                           <input
                             type="checkbox"
@@ -1299,37 +1428,116 @@ function Admin({
                   </section>
                 </div>
 
-                <div className="admin-question-list">
-                  <h3>Existing Questions</h3>
-                  {adminQuizzes.length === 0 ? (
-                    <p>No admin quiz questions yet.</p>
+                <section className="admin-question-list" aria-label="Question bank">
+                  <div className="admin-question-list-head">
+                    <div>
+                      <h3>Question Bank</h3>
+                      <p>{questionSearch.trim() ? `${visibleQuestionPage.length} questions found on this page` : `${adminQuestionTotal.toLocaleString()} total questions`}</p>
+                    </div>
+                    <div className="admin-small-actions">
+                      <button type="button" className="btn btn-light admin-mini-btn" onClick={clearQuestionFilters}>Clear Filters</button>
+                      <button type="button" className="btn btn-primary admin-mini-btn" onClick={() => setActiveTab('quizManagement')}>Import Questions</button>
+                    </div>
+                  </div>
+
+                  <div className="admin-question-filters">
+                    <input
+                      type="search"
+                      value={questionSearch}
+                      onChange={(event) => setQuestionSearch(event.target.value)}
+                      placeholder="Search loaded questions..."
+                      aria-label="Search loaded questions"
+                    />
+                    <select value={questionCategory} onChange={(event) => {
+                      setQuestionCategory(event.target.value)
+                      setQuestionSubcategory('')
+                    }}>
+                      <option value="">All categories</option>
+                      {quizCategories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}
+                    </select>
+                    <select value={questionSubcategory} onChange={(event) => setQuestionSubcategory(event.target.value)} disabled={!availableQuestionSubcategories.length}>
+                      <option value="">All subcategories</option>
+                      {availableQuestionSubcategories.map((subcategoryName) => <option key={subcategoryName} value={subcategoryName}>{subcategoryName}</option>)}
+                    </select>
+                    <select value={questionDateFilter} onChange={(event) => setQuestionDateFilter(event.target.value)}>
+                      <option value="all">All time</option>
+                      <option value="today">Today</option>
+                      <option value="yesterday">Yesterday</option>
+                      <option value="last7">Last 7 days</option>
+                      <option value="last30">Last 30 days</option>
+                      <option value="month">This month</option>
+                      <option value="year">This year</option>
+                      <option value="custom">Custom range</option>
+                    </select>
+                    <select value={questionSort} onChange={(event) => setQuestionSort(event.target.value)}>
+                      <option value="newest">Newest first</option>
+                      <option value="oldest">Oldest first</option>
+                      <option value="order">Question order</option>
+                      <option value="categoryAsc">Category A-Z</option>
+                      <option value="categoryDesc">Category Z-A</option>
+                      <option value="subcategoryAsc">Subcategory A-Z</option>
+                      <option value="subcategoryDesc">Subcategory Z-A</option>
+                    </select>
+                  </div>
+
+                  {questionDateFilter === 'custom' ? (
+                    <div className="admin-question-date-range">
+                      <label>From <input type="date" value={questionFromDate} onChange={(event) => setQuestionFromDate(event.target.value)} /></label>
+                      <label>To <input type="date" value={questionToDate} onChange={(event) => setQuestionToDate(event.target.value)} /></label>
+                    </div>
+                  ) : null}
+
+                  {adminQuestionPageError ? <p className="auth-error">{adminQuestionPageError}</p> : null}
+                  {adminQuestionPageLoading ? <p className="admin-upload-status">Loading questions...</p> : null}
+                  {!adminQuestionPageLoading && !visibleQuestionPage.length ? (
+                    <div className="admin-question-empty"><strong>No questions found</strong><span>Try changing your filters or clear the current search.</span></div>
                   ) : (
-                    <div className="admin-resource-grid">
-                      {adminQuizzes.map((item) => (
-                        <article key={item.id} className="admin-resource-card">
-                          <h3>{item.question}</h3>
-                          <p className="admin-resource-meta">
-                            Category: {item.category} / {item.subcategory ?? 'General'}
-                          </p>
-                          <p>A. {item.options.A}</p>
-                          <p>B. {item.options.B}</p>
-                          <p>C. {item.options.C}</p>
-                          <p>D. {item.options.D}</p>
-                          <p className="admin-resource-meta">Correct: {item.correctAnswer}</p>
-                          <button
-                            type="button"
-                            className="btn btn-light admin-mini-btn is-danger"
-                            disabled={adminQuizLoading}
-                            onClick={() => onDeleteAdminQuestion(item.id)}
-                          >
-                              <span className="admin-action-icon" aria-hidden="true">{ADMIN_ACTION_ICONS.delete}</span>
-                            Delete
-                          </button>
-                        </article>
-                      ))}
+                    <div className="admin-question-table-wrap">
+                      <table className="admin-question-table">
+                        <thead><tr><th>#</th><th>Question</th><th>Category</th><th>Subcategory</th><th>Answer</th><th>Added</th><th>Actions</th></tr></thead>
+                        <tbody>
+                          {visibleQuestionPage.map((item, index) => (
+                            <tr key={item.id}>
+                              <td>{(questionPageNumber - 1) * questionPageSize + index + 1}</td>
+                              <td><button type="button" className="admin-question-link" onClick={() => setQuestionDetail(item)}>{item.question}</button></td>
+                              <td>{item.category}</td>
+                              <td>{item.subcategory}</td>
+                              <td><span className="admin-answer-badge">{item.correctAnswer}</span></td>
+                              <td>{formatQuestionDate(item.createdAt)}</td>
+                              <td><div className="admin-small-actions"><button type="button" className="btn btn-light admin-mini-btn" onClick={() => setQuestionDetail(item)}>View</button><button type="button" className="btn btn-light admin-mini-btn" onClick={() => startQuestionEdit(item)}>Edit</button><button type="button" className="btn btn-light admin-mini-btn is-danger" onClick={() => { if (window.confirm('Delete this question?')) deleteQuestionAndRefresh(item.id) }}>Delete</button></div></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
-                </div>
+
+                  <div className="admin-question-pagination"><span>Page {questionPageNumber} of {Math.max(1, Math.ceil(adminQuestionTotal / questionPageSize))}</span><label>Rows <select value={questionPageSize} onChange={(event) => setQuestionPageSize(Number(event.target.value))}><option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label><button type="button" className="btn btn-light admin-mini-btn" onClick={goToPreviousQuestionPage} disabled={questionPageNumber === 1 || adminQuestionPageLoading}>Previous</button><button type="button" className="btn btn-light admin-mini-btn" onClick={goToNextQuestionPage} disabled={!questionPageHasMore || adminQuestionPageLoading}>Next</button></div>
+                </section>
+
+                {questionDetail ? (
+                  <div className="admin-question-modal-overlay" role="presentation" onClick={() => setQuestionDetail(null)}>
+                    <article className="admin-question-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+                      <div className="admin-question-modal-head"><h3>Question</h3><button type="button" className="btn btn-light admin-mini-btn" onClick={() => setQuestionDetail(null)}>Close</button></div>
+                      <p className="admin-question-detail-text">{questionDetail.question}</p>
+                      <div className="admin-question-options">{['A', 'B', 'C', 'D'].map((key) => <p key={key}><strong>{key}.</strong> {questionDetail.options[key]}</p>)}</div>
+                      <p><strong>Correct answer:</strong> {questionDetail.correctAnswer}</p><p><strong>Category:</strong> {questionDetail.category} / {questionDetail.subcategory}</p><p><strong>Order:</strong> {questionDetail.order ?? 'Legacy'}</p><p><strong>Added:</strong> {formatQuestionDate(questionDetail.createdAt)}</p>
+                      <div className="admin-small-actions"><button type="button" className="btn btn-primary admin-mini-btn" onClick={() => startQuestionEdit(questionDetail)}>Edit</button><button type="button" className="btn btn-light admin-mini-btn is-danger" onClick={() => { if (window.confirm('Delete this question?')) { deleteQuestionAndRefresh(questionDetail.id); setQuestionDetail(null) } }}>Delete</button></div>
+                    </article>
+                  </div>
+                ) : null}
+
+                {questionEditing ? (
+                  <div className="admin-question-modal-overlay" role="presentation">
+                    <form className="admin-question-modal admin-form" onSubmit={submitQuestionEdit}>
+                      <div className="admin-question-modal-head"><h3>Edit Question</h3><button type="button" className="btn btn-light admin-mini-btn" onClick={() => setQuestionEditing(null)}>Cancel</button></div>
+                      <label>Question<textarea value={questionEditing.question} onChange={(event) => setQuestionEditing((prev) => ({ ...prev, question: event.target.value }))} /></label>
+                      <div className="admin-options-grid">{['A', 'B', 'C', 'D'].map((key) => <label key={key} className="admin-option-field">Option {key}<input value={questionEditing.options[key]} onChange={(event) => setQuestionEditing((prev) => ({ ...prev, options: { ...prev.options, [key]: event.target.value } }))} /></label>)}</div>
+                      <label>Correct answer<select value={questionEditing.correctAnswer} onChange={(event) => setQuestionEditing((prev) => ({ ...prev, correctAnswer: event.target.value }))}><option>A</option><option>B</option><option>C</option><option>D</option></select></label>
+                      {questionEditError ? <p className="auth-error">{questionEditError}</p> : null}<button type="submit" className="btn btn-primary admin-mini-btn">Save Changes</button>
+                    </form>
+                  </div>
+                ) : null}
               </section>
             ) : null}
 

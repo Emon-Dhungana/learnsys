@@ -7,10 +7,15 @@ import {
   doc,
   getDoc,
   getDocs,
+  getCountFromServer,
   limit,
+  orderBy,
   query,
   serverTimestamp,
+  startAfter,
   setDoc,
+  Timestamp,
+  updateDoc,
   where,
   writeBatch,
 } from 'firebase/firestore'
@@ -128,6 +133,20 @@ const getCreatedAtMs = (value) => {
   }
 
   return null
+}
+
+const mapQuizDocument = (quizDoc) => {
+  const data = quizDoc.data()
+  return {
+    id: quizDoc.id,
+    question: data.question ?? '',
+    options: data.options ?? { A: '', B: '', C: '', D: '' },
+    correctAnswer: data.correctAnswer ?? 'A',
+    category: data.category ?? 'Uncategorized',
+    subcategory: data.subcategory ?? 'General',
+    createdAt: data.createdAt ?? null,
+    order: Number.isFinite(data.order) ? data.order : null,
+  }
 }
 
 function App() {
@@ -258,6 +277,10 @@ function App() {
   const [adminQuizzes, setAdminQuizzes] = useState([])
   const [adminQuizLoading, setAdminQuizLoading] = useState(false)
   const [adminQuizError, setAdminQuizError] = useState('')
+  const [adminQuestionPage, setAdminQuestionPage] = useState([])
+  const [adminQuestionTotal, setAdminQuestionTotal] = useState(0)
+  const [adminQuestionPageLoading, setAdminQuestionPageLoading] = useState(false)
+  const [adminQuestionPageError, setAdminQuestionPageError] = useState('')
   const [adminUsers, setAdminUsers] = useState([])
   const [adminUsersLoading, setAdminUsersLoading] = useState(false)
   const [adminUsersError, setAdminUsersError] = useState('')
@@ -705,7 +728,7 @@ function App() {
     setAdminAuthError('')
     setIsAdminAuthOpen(false)
     localStorage.setItem(adminStorageKey, 'true')
-    await Promise.all([loadAdminQuizzes(), loadAdminUsers()])
+    await loadAdminUsers()
     navigate('/admin')
   }
 
@@ -791,19 +814,7 @@ function App() {
     try {
       const snapshot = await getDocs(collection(db, 'quizzes'))
       const firestoreQuizzes = snapshot.docs
-        .map((quizDoc) => {
-          const data = quizDoc.data()
-          return {
-            id: quizDoc.id,
-            question: data.question ?? '',
-            options: data.options ?? { A: '', B: '', C: '', D: '' },
-            correctAnswer: data.correctAnswer ?? 'A',
-            category: data.category ?? 'Uncategorized',
-            subcategory: data.subcategory ?? 'General',
-            createdAt: data.createdAt ?? null,
-            order: Number.isFinite(data.order) ? data.order : null,
-          }
-        })
+        .map(mapQuizDocument)
         .sort((a, b) => {
           const aValue = a.createdAt?.seconds ?? 0
           const bValue = b.createdAt?.seconds ?? 0
@@ -816,6 +827,110 @@ function App() {
     } finally {
       setAdminQuizLoading(false)
     }
+  }, [])
+
+  const loadAdminQuestionPage = useCallback(async ({
+    category = '',
+    subcategory = '',
+    dateFilter = 'all',
+    fromDate = '',
+    toDate = '',
+    sort = 'newest',
+    pageSize = 25,
+    cursor = null,
+  } = {}) => {
+    setAdminQuestionPageLoading(true)
+    setAdminQuestionPageError('')
+
+    try {
+      const constraints = []
+      if (category) constraints.push(where('category', '==', category))
+      if (subcategory) constraints.push(where('subcategory', '==', subcategory))
+
+      const now = new Date()
+      let startDate = null
+      let endDate = null
+      if (dateFilter === 'today') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        endDate = new Date(startDate)
+        endDate.setDate(endDate.getDate() + 1)
+      } else if (dateFilter === 'yesterday') {
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        startDate = new Date(endDate)
+        startDate.setDate(startDate.getDate() - 1)
+      } else if (dateFilter === 'last7') {
+        startDate = new Date(now)
+        startDate.setDate(startDate.getDate() - 7)
+      } else if (dateFilter === 'last30') {
+        startDate = new Date(now)
+        startDate.setDate(startDate.getDate() - 30)
+      } else if (dateFilter === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+      } else if (dateFilter === 'year') {
+        startDate = new Date(now.getFullYear(), 0, 1)
+      } else if (dateFilter === 'custom') {
+        startDate = fromDate ? new Date(`${fromDate}T00:00:00`) : null
+        endDate = toDate ? new Date(`${toDate}T23:59:59.999`) : null
+      }
+
+      if (startDate) constraints.push(where('createdAt', '>=', Timestamp.fromDate(startDate)))
+      if (endDate) constraints.push(where('createdAt', '<=', Timestamp.fromDate(endDate)))
+
+      const sortMap = {
+        newest: ['createdAt', 'desc'],
+        oldest: ['createdAt', 'asc'],
+        order: ['order', 'asc'],
+        categoryAsc: ['category', 'asc'],
+        categoryDesc: ['category', 'desc'],
+        subcategoryAsc: ['subcategory', 'asc'],
+        subcategoryDesc: ['subcategory', 'desc'],
+      }
+      const [requestedSortField, sortDirection] = sortMap[sort] ?? sortMap.newest
+      // Legacy questions may not have order; createdAt keeps them visible in the order view.
+      const sortField = requestedSortField === 'order' ? 'createdAt' : requestedSortField
+      const baseConstraints = [...constraints, orderBy(sortField, sortDirection)]
+      const countSnapshot = await getCountFromServer(query(collection(db, 'quizzes'), ...constraints))
+      const pageConstraints = [...baseConstraints, limit(pageSize)]
+      if (cursor) pageConstraints.push(startAfter(cursor))
+      const snapshot = await getDocs(query(collection(db, 'quizzes'), ...pageConstraints))
+      const questions = snapshot.docs.map(mapQuizDocument)
+      if (sort === 'order') {
+        questions.sort((left, right) => {
+          if (left.order === null && right.order === null) return 0
+          if (left.order === null) return 1
+          if (right.order === null) return -1
+          return left.order - right.order
+        })
+      }
+
+      setAdminQuestionPage(questions)
+      setAdminQuestionTotal(countSnapshot.data().count)
+      return {
+        questions,
+        lastDoc: snapshot.docs.at(-1) ?? null,
+        hasMore: snapshot.docs.length === pageSize,
+      }
+    } catch {
+      setAdminQuestionPageError('Unable to load this question page. Check your Firestore indexes and connection.')
+      return { questions: [], lastDoc: null, hasMore: false }
+    } finally {
+      setAdminQuestionPageLoading(false)
+    }
+  }, [])
+
+  const findAdminQuestionDuplicates = useCallback(async (category, subcategory, questions) => {
+    const snapshot = await getDocs(query(
+      collection(db, 'quizzes'),
+      where('category', '==', category),
+      where('subcategory', '==', subcategory),
+    ))
+    const existingKeys = new Set(snapshot.docs.map((quizDoc) => {
+      const item = mapQuizDocument(quizDoc)
+      return getQuestionDuplicateKey(category, subcategory, item.question)
+    }))
+    return questions.filter((item) => existingKeys.has(
+      getQuestionDuplicateKey(category, subcategory, item.question),
+    )).length
   }, [])
 
   const loadAdminUsers = useCallback(async () => {
@@ -948,8 +1063,6 @@ function App() {
         subcategory: questionInput.subcategory,
         createdAt: serverTimestamp(),
       })
-
-      await loadAdminQuizzes()
     } catch (error) {
       setAdminQuizError(error?.message || 'Failed to save quiz to Firestore.')
       throw error
@@ -960,9 +1073,12 @@ function App() {
     setAdminQuizError('')
 
     try {
-      const existingQuestions = adminQuizzes.filter(
-        (item) => item.category === category && item.subcategory === subcategory,
-      )
+      const existingSnapshot = await getDocs(query(
+        collection(db, 'quizzes'),
+        where('category', '==', category),
+        where('subcategory', '==', subcategory),
+      ))
+      const existingQuestions = existingSnapshot.docs.map(mapQuizDocument)
       const existingKeys = new Set(
         existingQuestions.map((item) => getQuestionDuplicateKey(category, subcategory, item.question)),
       )
@@ -1007,7 +1123,6 @@ function App() {
         onProgress(imported, rowsToImport.length)
       }
 
-      await loadAdminQuizzes()
       return { imported, skipped }
     } catch (error) {
       setAdminQuizError('Import failed. Check your connection and Firestore permissions, then try again.')
@@ -1020,9 +1135,25 @@ function App() {
 
     try {
       await deleteDoc(doc(db, 'quizzes', questionId))
-      await loadAdminQuizzes()
     } catch (error) {
       setAdminQuizError(error?.message || 'Failed to delete quiz from Firestore.')
+    }
+  }
+
+  const handleUpdateAdminQuestion = async (questionId, questionInput) => {
+    setAdminQuizError('')
+
+    try {
+      await updateDoc(doc(db, 'quizzes', questionId), {
+        question: questionInput.question,
+        options: questionInput.options,
+        correctAnswer: questionInput.correctAnswer,
+        category: questionInput.category,
+        subcategory: questionInput.subcategory,
+      })
+    } catch (error) {
+      setAdminQuizError(error?.message || 'Failed to update quiz in Firestore.')
+      throw error
     }
   }
 
@@ -1557,6 +1688,10 @@ function App() {
                     adminQuizzes={adminQuizzes}
                     adminQuizLoading={adminQuizLoading}
                     adminQuizError={adminQuizError}
+                    adminQuestionPage={adminQuestionPage}
+                    adminQuestionTotal={adminQuestionTotal}
+                    adminQuestionPageLoading={adminQuestionPageLoading}
+                    adminQuestionPageError={adminQuestionPageError}
                     adminUsers={adminUsers}
                     adminUsersLoading={adminUsersLoading}
                     adminUsersError={adminUsersError}
@@ -1574,7 +1709,10 @@ function App() {
                     onAddAdminQuestion={handleAddAdminQuestion}
                     onImportAdminQuestions={handleImportAdminQuestions}
                     onDeleteAdminQuestion={handleDeleteAdminQuestion}
+                    onUpdateAdminQuestion={handleUpdateAdminQuestion}
                     onLoadAdminQuizzes={loadAdminQuizzes}
+                    onLoadAdminQuestionPage={loadAdminQuestionPage}
+                    onFindAdminQuestionDuplicates={findAdminQuestionDuplicates}
                     onLoadAdminUsers={loadAdminUsers}
                     onDeleteRegisteredUser={handleDeleteRegisteredUser}
                     onUploadResource={handleUploadResource}

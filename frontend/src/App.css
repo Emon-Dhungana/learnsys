@@ -2566,6 +2566,211 @@ main {
   font-weight: 600;
 }
 
+.admin-question-list {
+  margin-top: 1rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 1rem;
+}
+
+.admin-question-list-head,
+.admin-question-pagination,
+.admin-question-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.admin-question-list-head h3,
+.admin-question-modal-head h3 {
+  margin: 0;
+  color: var(--ink-900);
+}
+
+.admin-question-list-head p {
+  margin: 0.25rem 0 0;
+  color: var(--ink-700);
+  font-size: 0.86rem;
+}
+
+.admin-question-filters {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.5fr) repeat(4, minmax(125px, 1fr));
+  gap: 0.55rem;
+  margin: 1rem 0 0.7rem;
+}
+
+.admin-question-filters input,
+.admin-question-filters select,
+.admin-question-date-range input,
+.admin-question-modal input,
+.admin-question-modal textarea,
+.admin-question-modal select {
+  width: 100%;
+  border: 1px solid #c8dff8;
+  border-radius: 9px;
+  padding: 0.55rem 0.62rem;
+  color: var(--ink-900);
+  background: #ffffff;
+  font: inherit;
+}
+
+.admin-question-date-range {
+  display: flex;
+  gap: 0.7rem;
+  margin-bottom: 0.7rem;
+}
+
+.admin-question-date-range label {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--ink-700);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.admin-question-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+}
+
+.admin-question-table {
+  width: 100%;
+  min-width: 850px;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.admin-question-table th,
+.admin-question-table td {
+  padding: 0.65rem 0.55rem;
+  border-bottom: 1px solid #e5eef8;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admin-question-table th {
+  color: var(--ink-900);
+  background: #f3f8ff;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.admin-question-table td:nth-child(2) {
+  max-width: 310px;
+}
+
+.admin-question-link {
+  display: block;
+  max-width: 310px;
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  color: var(--ink-900);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-question-link:hover {
+  color: var(--blue-700);
+  text-decoration: underline;
+}
+
+.admin-answer-badge {
+  display: inline-grid;
+  width: 1.7rem;
+  height: 1.7rem;
+  place-items: center;
+  border-radius: 50%;
+  color: #1f704d;
+  background: #dff5e9;
+  font-weight: 700;
+}
+
+.admin-question-pagination {
+  margin-top: 0.8rem;
+  color: var(--ink-700);
+  font-size: 0.86rem;
+}
+
+.admin-question-pagination label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.admin-question-pagination select {
+  border: 1px solid #c8dff8;
+  border-radius: 8px;
+  padding: 0.35rem;
+  background: #ffffff;
+}
+
+.admin-question-empty {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  padding: 2rem 1rem;
+  color: var(--ink-700);
+  text-align: center;
+}
+
+.admin-question-empty strong {
+  color: var(--ink-900);
+}
+
+.admin-question-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(12, 30, 54, 0.45);
+}
+
+.admin-question-modal {
+  width: min(680px, 100%);
+  max-height: min(760px, calc(100vh - 2rem));
+  overflow: auto;
+  border: 1px solid var(--admin-line, var(--line-soft));
+  border-radius: 16px;
+  padding: 1.1rem;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(12, 45, 85, 0.24);
+}
+
+.admin-question-detail-text {
+  margin: 1rem 0;
+  color: var(--ink-900);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.admin-question-options {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.admin-question-options p,
+.admin-question-modal > p {
+  margin: 0;
+  color: var(--ink-700);
+}
+
+.admin-question-modal .admin-options-grid {
+  margin: 0.6rem 0;
+}
+
 .admin-dashboard {
   --admin-bg: #f4f7ff;
   --admin-bg-soft: #edf3ff;
@@ -3342,6 +3547,22 @@ main {
   }
 
   .admin-import-surface .admin-small-actions .btn {
+    width: 100%;
+  }
+
+  .admin-question-list-head,
+  .admin-question-pagination,
+  .admin-question-date-range {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-question-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-question-filters input,
+  .admin-question-filters select {
     width: 100%;
   }
 

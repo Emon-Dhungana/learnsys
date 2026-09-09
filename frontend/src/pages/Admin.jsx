@@ -234,6 +234,13 @@ function Admin({
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadFileInputKey, setUploadFileInputKey] = useState(0)
   const [userSearch, setUserSearch] = useState('')
+  const [courseSearch, setCourseSearch] = useState('')
+  const [courseFilterCategory, setCourseFilterCategory] = useState('')
+  const [courseFilterSubcategory, setCourseFilterSubcategory] = useState('')
+  const [courseSort, setCourseSort] = useState('newest')
+  const [coursePageSize, setCoursePageSize] = useState(12)
+  const [coursePage, setCoursePage] = useState(1)
+  const [courseDetail, setCourseDetail] = useState(null)
   const [importCategoryId, setImportCategoryId] = useState('')
   const [importSubcategory, setImportSubcategory] = useState('')
   const [importFile, setImportFile] = useState(null)
@@ -275,6 +282,34 @@ function Admin({
   const totalResources = resources.length
   const totalQuizQuestions = adminQuestionTotal
   const totalRegisteredUsers = adminUsers.length
+
+  const filteredResources = useMemo(() => {
+    const search = courseSearch.trim().toLowerCase()
+    const filtered = resources.filter((resource) => {
+      const matchesSearch = !search || [resource.title, resource.description, resource.fileName]
+        .some((value) => (value ?? '').toLowerCase().includes(search))
+      const matchesCategory = !courseFilterCategory || resource.category === courseFilterCategory
+      const matchesSubcategory = !courseFilterSubcategory || resource.subcategory === courseFilterSubcategory
+      return matchesSearch && matchesCategory && matchesSubcategory
+    })
+
+    return [...filtered].sort((left, right) => {
+      if (courseSort === 'titleAsc') return (left.title ?? '').localeCompare(right.title ?? '')
+      if (courseSort === 'titleDesc') return (right.title ?? '').localeCompare(left.title ?? '')
+      if (courseSort === 'categoryAsc') return (left.category ?? '').localeCompare(right.category ?? '')
+      return resources.indexOf(left) - resources.indexOf(right)
+    })
+  }, [courseFilterCategory, courseFilterSubcategory, courseSearch, courseSort, resources])
+
+  const visibleResources = filteredResources.slice(
+    (coursePage - 1) * coursePageSize,
+    coursePage * coursePageSize,
+  )
+  const coursePageCount = Math.max(1, Math.ceil(filteredResources.length / coursePageSize))
+  const selectedCourseFilterCategory = courseCategories.find((item) => item.name === courseFilterCategory)
+  const courseFilterSubcategories = courseFilterCategory
+    ? selectedCourseFilterCategory?.subcategories ?? []
+    : [...new Set(courseCategories.flatMap((item) => item.subcategories))]
 
   const filteredAdminUsers = useMemo(() => {
     const queryText = userSearch.trim().toLowerCase()
@@ -842,6 +877,7 @@ function Admin({
     try {
       setUploadLoading(true)
       setUploadProgress(0)
+      setCoursePage(1)
 
       const result = await uploadToCloudinary(uploadData.file, setUploadProgress)
 
@@ -871,6 +907,24 @@ function Admin({
     } finally {
       setUploadLoading(false)
     }
+  }
+
+  const clearCourseFilters = () => {
+    setCourseSearch('')
+    setCourseFilterCategory('')
+    setCourseFilterSubcategory('')
+    setCourseSort('newest')
+    setCoursePage(1)
+  }
+
+  const deleteCourseResource = (resource) => {
+    if (!window.confirm(`Delete resource "${resource.title}"?`)) {
+      return
+    }
+
+    onDeleteResource(resource.id)
+    setCourseDetail(null)
+    setCoursePage(1)
   }
 
   const handleAdminLogout = () => {
@@ -1103,34 +1157,74 @@ function Admin({
                   </section>
                 </div>
 
-                <section className="admin-resource-list" aria-label="Uploaded resources">
-                  <h3>Uploaded Resources</h3>
-                  {resources.length === 0 ? (
-                    <p>No uploaded resources yet.</p>
+                <section className="admin-resource-list admin-course-library" aria-label="Uploaded resources">
+                  <div className="admin-question-list-head">
+                    <div>
+                      <h3>Course Library</h3>
+                      <p>{filteredResources.length.toLocaleString()} resources found</p>
+                    </div>
+                    <button type="button" className="btn btn-light admin-mini-btn" onClick={clearCourseFilters}>Clear Filters</button>
+                  </div>
+
+                  <div className="admin-question-filters admin-course-filters">
+                    <input
+                      type="search"
+                      value={courseSearch}
+                      onChange={(event) => { setCourseSearch(event.target.value); setCoursePage(1) }}
+                      placeholder="Search title, description, or file..."
+                      aria-label="Search course resources"
+                    />
+                    <select value={courseFilterCategory} onChange={(event) => { setCourseFilterCategory(event.target.value); setCourseFilterSubcategory(''); setCoursePage(1) }}>
+                      <option value="">All categories</option>
+                      {courseCategories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}
+                    </select>
+                    <select value={courseFilterSubcategory} onChange={(event) => { setCourseFilterSubcategory(event.target.value); setCoursePage(1) }} disabled={!courseFilterSubcategories.length}>
+                      <option value="">All subcategories</option>
+                      {courseFilterSubcategories.map((subcategoryName) => <option key={subcategoryName} value={subcategoryName}>{subcategoryName}</option>)}
+                    </select>
+                    <select value={courseSort} onChange={(event) => { setCourseSort(event.target.value); setCoursePage(1) }}>
+                      <option value="newest">Recently added</option>
+                      <option value="titleAsc">Title A-Z</option>
+                      <option value="titleDesc">Title Z-A</option>
+                      <option value="categoryAsc">Category A-Z</option>
+                    </select>
+                  </div>
+
+                  {!visibleResources.length ? (
+                    <div className="admin-question-empty"><strong>{resources.length ? 'No resources match your filters' : 'No uploaded resources yet'}</strong><span>{resources.length ? 'Try changing your search or filters.' : 'Upload a resource to build your course library.'}</span></div>
                   ) : (
-                    <div className="admin-resource-grid">
-                      {resources.map((resource) => (
-                        <article key={resource.id} className="admin-resource-card">
-                          <h3>{resource.title}</h3>
-                          <p className="admin-resource-meta">
-                            Category: {resource.category}
-                          </p>
-                          <p className="admin-resource-meta">
-                            Subcategory: {resource.subcategory}
-                          </p>
-                          <button
-                            type="button"
-                            className="btn btn-light admin-mini-btn is-danger"
-                            onClick={() => onDeleteResource(resource.id)}
-                          >
-                            <span className="admin-action-icon" aria-hidden="true">{ADMIN_ACTION_ICONS.delete}</span>
-                            Delete
-                          </button>
-                        </article>
-                      ))}
+                    <div className="admin-course-table-wrap">
+                      <table className="admin-question-table admin-course-table">
+                        <thead><tr><th>Title</th><th>Category</th><th>Subcategory</th><th>File</th><th>Actions</th></tr></thead>
+                        <tbody>
+                          {visibleResources.map((resource) => (
+                            <tr key={resource.id}>
+                              <td><button type="button" className="admin-question-link" onClick={() => setCourseDetail(resource)}>{resource.title}</button><small>{resource.description}</small></td>
+                              <td>{resource.category}</td>
+                              <td>{resource.subcategory}</td>
+                              <td>{resource.fileName || 'Uploaded file'}</td>
+                              <td><div className="admin-small-actions"><button type="button" className="btn btn-light admin-mini-btn" onClick={() => setCourseDetail(resource)}>View</button><button type="button" className="btn btn-light admin-mini-btn is-danger" onClick={() => deleteCourseResource(resource)}>Delete</button></div></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
+
+                  <div className="admin-question-pagination"><span>Page {coursePage} of {coursePageCount}</span><label>Rows <select value={coursePageSize} onChange={(event) => { setCoursePageSize(Number(event.target.value)); setCoursePage(1) }}><option value="12">12</option><option value="25">25</option><option value="50">50</option></select></label><button type="button" className="btn btn-light admin-mini-btn" onClick={() => setCoursePage((page) => Math.max(1, page - 1))} disabled={coursePage === 1}>Previous</button><button type="button" className="btn btn-light admin-mini-btn" onClick={() => setCoursePage((page) => Math.min(coursePageCount, page + 1))} disabled={coursePage >= coursePageCount}>Next</button></div>
                 </section>
+
+                {courseDetail ? (
+                  <div className="admin-question-modal-overlay" role="presentation" onClick={() => setCourseDetail(null)}>
+                    <article className="admin-question-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+                      <div className="admin-question-modal-head"><h3>Course Resource</h3><button type="button" className="btn btn-light admin-mini-btn" onClick={() => setCourseDetail(null)}>Close</button></div>
+                      <p className="admin-question-detail-text">{courseDetail.title}</p>
+                      <p>{courseDetail.description || 'No description provided.'}</p>
+                      <p><strong>Category:</strong> {courseDetail.category}</p><p><strong>Subcategory:</strong> {courseDetail.subcategory}</p><p><strong>File:</strong> {courseDetail.fileName || 'Uploaded file'}</p>
+                      <div className="admin-small-actions"><a className="btn btn-primary admin-mini-btn" href={courseDetail.fileUrl} target="_blank" rel="noreferrer">Open Resource</a><button type="button" className="btn btn-light admin-mini-btn is-danger" onClick={() => deleteCourseResource(courseDetail)}>Delete</button></div>
+                    </article>
+                  </div>
+                ) : null}
               </section>
             ) : null}
 

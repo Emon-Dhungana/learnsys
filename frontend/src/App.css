@@ -2771,6 +2771,39 @@ main {
   margin: 0.6rem 0;
 }
 
+.admin-course-library {
+  margin-top: 1rem;
+}
+
+.admin-course-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+}
+
+.admin-course-table {
+  min-width: 760px;
+}
+
+.admin-course-table td:first-child {
+  min-width: 230px;
+}
+
+.admin-course-table td:first-child small {
+  display: block;
+  max-width: 280px;
+  margin-top: 0.25rem;
+  overflow: hidden;
+  color: var(--ink-700);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-course-table td:nth-child(4) {
+  max-width: 180px;
+  overflow-wrap: anywhere;
+}
+
 .admin-dashboard {
   --admin-bg: #f4f7ff;
   --admin-bg-soft: #edf3ff;

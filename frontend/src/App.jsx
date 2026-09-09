@@ -26,6 +26,7 @@ import Admin from './pages/Admin'
 import QuizPage from './pages/QuizPage'
 import TypingPage from './pages/TypingPage'
 import { db } from './firebase'
+import { getQuestionDuplicateKey } from './utils/quizImport'
 import './App.css'
 
 const defaultTypingStats = () => ({
@@ -800,6 +801,7 @@ function App() {
             category: data.category ?? 'Uncategorized',
             subcategory: data.subcategory ?? 'General',
             createdAt: data.createdAt ?? null,
+            order: Number.isFinite(data.order) ? data.order : null,
           }
         })
         .sort((a, b) => {
@@ -950,6 +952,65 @@ function App() {
       await loadAdminQuizzes()
     } catch (error) {
       setAdminQuizError(error?.message || 'Failed to save quiz to Firestore.')
+      throw error
+    }
+  }
+
+  const handleImportAdminQuestions = async ({ category, subcategory, rows, skipDuplicates, onProgress }) => {
+    setAdminQuizError('')
+
+    try {
+      const existingQuestions = adminQuizzes.filter(
+        (item) => item.category === category && item.subcategory === subcategory,
+      )
+      const existingKeys = new Set(
+        existingQuestions.map((item) => getQuestionDuplicateKey(category, subcategory, item.question)),
+      )
+      const highestOrder = existingQuestions.reduce(
+        (highest, item) => Math.max(highest, Number.isFinite(item.order) ? item.order : 0),
+        0,
+      )
+      let nextOrder = Math.max(highestOrder, existingQuestions.length)
+      const rowsToImport = []
+      let skipped = 0
+
+      rows.forEach((row) => {
+        const duplicateKey = getQuestionDuplicateKey(category, subcategory, row.question)
+        if (skipDuplicates && existingKeys.has(duplicateKey)) {
+          skipped += 1
+          return
+        }
+
+        existingKeys.add(duplicateKey)
+        nextOrder += 1
+        rowsToImport.push({ ...row, order: nextOrder })
+      })
+
+      const batchSize = 450
+      let imported = 0
+      for (let start = 0; start < rowsToImport.length; start += batchSize) {
+        const batch = writeBatch(db)
+        rowsToImport.slice(start, start + batchSize).forEach((row) => {
+          const questionRef = doc(collection(db, 'quizzes'))
+          batch.set(questionRef, {
+            question: row.question,
+            options: row.options,
+            correctAnswer: row.correctAnswer,
+            category,
+            subcategory,
+            order: row.order,
+            createdAt: serverTimestamp(),
+          })
+        })
+        await batch.commit()
+        imported += Math.min(batchSize, rowsToImport.length - start)
+        onProgress(imported, rowsToImport.length)
+      }
+
+      await loadAdminQuizzes()
+      return { imported, skipped }
+    } catch (error) {
+      setAdminQuizError('Import failed. Check your connection and Firestore permissions, then try again.')
       throw error
     }
   }
@@ -1511,6 +1572,7 @@ function App() {
                     onAddQuizSubcategory={handleAddQuizSubcategory}
                     onDeleteQuizSubcategory={handleDeleteQuizSubcategory}
                     onAddAdminQuestion={handleAddAdminQuestion}
+                    onImportAdminQuestions={handleImportAdminQuestions}
                     onDeleteAdminQuestion={handleDeleteAdminQuestion}
                     onLoadAdminQuizzes={loadAdminQuizzes}
                     onLoadAdminUsers={loadAdminUsers}

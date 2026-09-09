@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { uploadToCloudinary } from '../utils/uploadToCloudinary'
+import { getQuestionDuplicateKey, getWorksheetNames, parseQuizFile } from '../utils/quizImport'
 
 const ADMIN_TABS = [
   { id: 'overview', label: 'Overview' },
@@ -177,6 +178,7 @@ function Admin({
   onAddQuizSubcategory,
   onDeleteQuizSubcategory,
   onAddAdminQuestion,
+  onImportAdminQuestions,
   onDeleteAdminQuestion,
   onLoadAdminQuizzes,
   onLoadAdminUsers,
@@ -227,9 +229,22 @@ function Admin({
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadFileInputKey, setUploadFileInputKey] = useState(0)
   const [userSearch, setUserSearch] = useState('')
+  const [importCategoryId, setImportCategoryId] = useState('')
+  const [importSubcategory, setImportSubcategory] = useState('')
+  const [importFile, setImportFile] = useState(null)
+  const [importWorksheets, setImportWorksheets] = useState([])
+  const [importWorksheet, setImportWorksheet] = useState('')
+  const [importPreview, setImportPreview] = useState(null)
+  const [importError, setImportError] = useState('')
+  const [importValidOnly, setImportValidOnly] = useState(false)
+  const [skipImportDuplicates, setSkipImportDuplicates] = useState(true)
+  const [importingQuestions, setImportingQuestions] = useState(false)
+  const [importProgress, setImportProgress] = useState({ completed: 0, total: 0 })
+  const [importSummary, setImportSummary] = useState(null)
 
   const selectedCourseCategory = courseCategories.find((item) => item.id === uploadData.categoryId)
   const selectedQuizCategory = quizCategories.find((item) => item.id === questionData.categoryId)
+  const selectedImportCategory = quizCategories.find((item) => item.id === importCategoryId)
   const totalCourses = new Set(
     resources.map((resource) => resource.title.trim().toLowerCase()),
   ).size
@@ -249,6 +264,23 @@ function Admin({
       return usernameMatch || emailMatch
     })
   }, [adminUsers, userSearch])
+
+  const possibleImportDuplicates = useMemo(() => {
+    if (!importPreview || !selectedImportCategory || !importSubcategory) {
+      return 0
+    }
+
+    const existingKeys = new Set(
+      adminQuizzes
+        .filter((item) => item.category === selectedImportCategory.name && item.subcategory === importSubcategory)
+        .map((item) => getQuestionDuplicateKey(selectedImportCategory.name, importSubcategory, item.question)),
+    )
+    return importPreview.rows.filter(
+      (row) => row.valid && existingKeys.has(
+        getQuestionDuplicateKey(selectedImportCategory.name, importSubcategory, row.question),
+      ),
+    ).length
+  }, [adminQuizzes, importPreview, importSubcategory, selectedImportCategory])
 
   useEffect(() => {
     onLoadAdminQuizzes()
@@ -487,6 +519,90 @@ function Admin({
     }
 
     setUploadError('')
+  }
+
+  const resetImport = () => {
+    setImportFile(null)
+    setImportWorksheets([])
+    setImportWorksheet('')
+    setImportPreview(null)
+    setImportError('')
+    setImportSummary(null)
+    setImportProgress({ completed: 0, total: 0 })
+  }
+
+  const parseImportFile = async (file, worksheetName = '') => {
+    if (!file) {
+      return
+    }
+
+    setImportFile(file)
+    setImportError('')
+    setImportSummary(null)
+    try {
+      const worksheets = await getWorksheetNames(file)
+      if (!worksheets.length) {
+        throw new Error('The uploaded workbook has no worksheets.')
+      }
+      const selectedWorksheet = worksheetName || worksheets[0]
+      const preview = await parseQuizFile(file, selectedWorksheet)
+      setImportWorksheets(worksheets)
+      setImportWorksheet(selectedWorksheet)
+      setImportPreview(preview)
+    } catch (error) {
+      setImportPreview(null)
+      setImportWorksheets([])
+      setImportWorksheet('')
+      setImportError(error?.message || 'Unable to read this file. Please check its format.')
+    }
+  }
+
+  const handleImportFileChange = (event) => {
+    parseImportFile(event.target.files?.[0] ?? null)
+  }
+
+  const handleImportWorksheetChange = (event) => {
+    const nextWorksheet = event.target.value
+    setImportWorksheet(nextWorksheet)
+    if (importFile) {
+      parseImportFile(importFile, nextWorksheet)
+    }
+  }
+
+  const handleImportSubmit = async () => {
+    if (!selectedImportCategory || !importSubcategory || !importPreview) {
+      setImportError('Select a category, subcategory, and valid file before importing.')
+      return
+    }
+
+    if (importPreview.invalid > 0 && !importValidOnly) {
+      setImportError('Fix invalid rows or explicitly choose to import valid rows only.')
+      return
+    }
+
+    const rows = importPreview.rows.filter((row) => row.valid)
+    if (!rows.length) {
+      setImportError('There are no valid questions to import.')
+      return
+    }
+
+    try {
+      setImportingQuestions(true)
+      setImportError('')
+      setImportProgress({ completed: 0, total: rows.length })
+      const result = await onImportAdminQuestions({
+        category: selectedImportCategory.name,
+        subcategory: importSubcategory,
+        rows,
+        skipDuplicates: skipImportDuplicates,
+        onProgress: (completed, total) => setImportProgress({ completed, total }),
+      })
+      setImportSummary({ ...result, total: rows.length })
+    } catch {
+      setImportError('Import failed. Please check the admin connection and try again.')
+    } finally {
+      setImportingQuestions(false)
+    }
   }
 
   const handleQuestionFieldChange = (event) => {
@@ -901,6 +1017,158 @@ function Admin({
                   <span className="admin-kpi-chip">{totalQuizQuestions} Question Bank Size</span>
                   <span className="admin-kpi-chip">Admin Maintained</span>
                 </div>
+
+                <section className="admin-surface admin-import-surface" aria-label="Bulk question import workspace">
+                  <div className="admin-surface-head">
+                    <h3>Import Questions</h3>
+                    <p>Upload one CSV or Excel worksheet into one selected category and subcategory.</p>
+                  </div>
+
+                  <div className="admin-import-controls">
+                    <label htmlFor="import-question-category">Category</label>
+                    <select
+                      id="import-question-category"
+                      value={importCategoryId}
+                      onChange={(event) => {
+                        setImportCategoryId(event.target.value)
+                        setImportSubcategory('')
+                        setImportError('')
+                      }}
+                      disabled={importingQuestions}
+                    >
+                      <option value="">Select category</option>
+                      {quizCategories.map((category) => (
+                        <option key={category.id} value={category.id}>{category.name}</option>
+                      ))}
+                    </select>
+
+                    <label htmlFor="import-question-subcategory">Subcategory</label>
+                    <select
+                      id="import-question-subcategory"
+                      value={importSubcategory}
+                      onChange={(event) => setImportSubcategory(event.target.value)}
+                      disabled={!selectedImportCategory || importingQuestions}
+                    >
+                      <option value="">Select subcategory</option>
+                      {(selectedImportCategory?.subcategories ?? []).map((subcategoryName) => (
+                        <option key={subcategoryName} value={subcategoryName}>{subcategoryName}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <label
+                    className="admin-import-dropzone"
+                    htmlFor="quiz-import-file"
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault()
+                      parseImportFile(event.dataTransfer.files?.[0] ?? null)
+                    }}
+                  >
+                    <strong>Drop CSV, XLSX, or XLS here</strong>
+                    <span>or choose a file from your device</span>
+                    <input
+                      id="quiz-import-file"
+                      type="file"
+                      accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                      onChange={handleImportFileChange}
+                      disabled={importingQuestions}
+                    />
+                    {importFile ? <em className="admin-file-name">{importFile.name}</em> : null}
+                  </label>
+
+                  {importWorksheets.length > 1 ? (
+                    <label htmlFor="import-worksheet">
+                      Worksheet
+                      <select id="import-worksheet" value={importWorksheet} onChange={handleImportWorksheetChange}>
+                        {importWorksheets.map((worksheetName) => (
+                          <option key={worksheetName} value={worksheetName}>{worksheetName}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+
+                  {importError ? <p className="auth-error">{importError}</p> : null}
+
+                  {importPreview ? (
+                    <div className="admin-import-preview">
+                      <div className="admin-import-summary">
+                        <span>{importPreview.total} total</span>
+                        <span className="is-valid">{importPreview.valid} valid</span>
+                        <span className={importPreview.invalid ? 'is-invalid' : ''}>{importPreview.invalid} invalid</span>
+                        {possibleImportDuplicates ? <span className="is-warning">{possibleImportDuplicates} possible duplicates</span> : null}
+                      </div>
+
+                      {importPreview.invalid ? (
+                        <label className="admin-import-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={importValidOnly}
+                            onChange={(event) => setImportValidOnly(event.target.checked)}
+                            disabled={importingQuestions}
+                          />
+                          I understand and want to import valid rows only.
+                        </label>
+                      ) : null}
+
+                      {possibleImportDuplicates ? (
+                        <label className="admin-import-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={skipImportDuplicates}
+                            onChange={(event) => setSkipImportDuplicates(event.target.checked)}
+                            disabled={importingQuestions}
+                          />
+                          Skip questions that already exist in this category and subcategory.
+                        </label>
+                      ) : null}
+
+                      <div className="admin-import-table-wrap">
+                        <table className="admin-import-table">
+                          <thead>
+                            <tr><th>#</th><th>Question</th><th>A</th><th>B</th><th>C</th><th>D</th><th>Answer</th><th>Status</th></tr>
+                          </thead>
+                          <tbody>
+                            {importPreview.rows.slice(0, 50).map((row) => (
+                              <tr key={row.rowNumber} className={row.valid ? '' : 'is-invalid'}>
+                                <td>{row.rowNumber}</td>
+                                <td>{row.question}</td>
+                                <td>{row.options.A}</td>
+                                <td>{row.options.B}</td>
+                                <td>{row.options.C}</td>
+                                <td>{row.options.D}</td>
+                                <td>{row.correctAnswer}</td>
+                                <td>{row.valid ? 'Valid' : row.errors.join('; ')}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {importPreview.rows.length > 50 ? <p className="admin-import-note">Showing the first 50 rows of the preview.</p> : null}
+                    </div>
+                  ) : null}
+
+                  {importingQuestions ? (
+                    <p className="admin-upload-status">Importing questions... {importProgress.completed} / {importProgress.total}</p>
+                  ) : null}
+                  {importSummary ? (
+                    <p className="admin-import-complete">Import complete: {importSummary.imported} imported, {importSummary.skipped} skipped.</p>
+                  ) : null}
+
+                  <div className="admin-small-actions">
+                    <button type="button" className="btn btn-light admin-mini-btn" onClick={resetImport} disabled={importingQuestions}>
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary admin-mini-btn"
+                      onClick={handleImportSubmit}
+                      disabled={importingQuestions || !importPreview || !selectedImportCategory || !importSubcategory || !importPreview.valid || (importPreview.invalid > 0 && !importValidOnly)}
+                    >
+                      {importingQuestions ? 'Importing...' : 'Import Questions'}
+                    </button>
+                  </div>
+                </section>
 
                 <div className="admin-workflow-grid admin-workflow-stack">
                   <section className="admin-surface" aria-label="Quiz category workspace">

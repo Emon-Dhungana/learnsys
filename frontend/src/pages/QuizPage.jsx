@@ -411,18 +411,20 @@ function QuizPage({
         </section>
       ) : null}
 
-      <div className="quiz-tabs" role="tablist" aria-label="Quiz tabs">
-        {tabList.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={`quiz-tab ${activeTab === tab ? 'is-active' : ''}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      {!quizSessionState ? (
+        <>
+          <div className="quiz-tabs" role="tablist" aria-label="Quiz tabs">
+            {tabList.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={`quiz-tab ${activeTab === tab ? 'is-active' : ''}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
 
       {activeTab === TAB_EXPLORE ? (
         <section className="quiz-panel" aria-label="Explore quizzes">
@@ -599,7 +601,7 @@ function QuizPage({
         </section>
       ) : null}
 
-      {activeTab === TAB_MY ? (
+          {activeTab === TAB_MY ? (
         <section className="quiz-panel" aria-label="My quizzes">
           <h2>My Quizzes</h2>
 
@@ -638,6 +640,8 @@ function QuizPage({
             </div>
           )}
         </section>
+      ) : null}
+        </>
       ) : null}
     </section>
   )

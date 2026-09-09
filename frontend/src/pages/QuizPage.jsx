@@ -42,6 +42,7 @@ function QuizPage({
 }) {
   const [activeTab, setActiveTab] = useState(TAB_EXPLORE)
   const [adminCategorySelection, setAdminCategorySelection] = useState('mixed')
+  const [adminSubcategorySelection, setAdminSubcategorySelection] = useState('mixed')
   const [adminQuestionCount, setAdminQuestionCount] = useState(10)
   const [exploreError, setExploreError] = useState('')
 
@@ -61,6 +62,15 @@ function QuizPage({
   useEffect(() => {
     onLoadAdminQuizzes()
   }, [onLoadAdminQuizzes])
+
+  const availableSubcategories = useMemo(() => {
+    const selectedCategories =
+      adminCategorySelection === 'mixed'
+        ? quizCategories
+        : quizCategories.filter((item) => item.name === adminCategorySelection)
+
+    return [...new Set(selectedCategories.flatMap((item) => item.subcategories ?? []))]
+  }, [adminCategorySelection, quizCategories])
 
   const startQuizSession = (title, mode, questions, sourceQuizId = null) => {
     onUpdateQuizSession({
@@ -84,10 +94,14 @@ function QuizPage({
       return
     }
 
-    const pool =
+    const categoryPool =
       adminCategorySelection === 'mixed'
         ? adminQuizzes
         : adminQuizzes.filter((item) => item.category === adminCategorySelection)
+    const pool =
+      adminSubcategorySelection === 'mixed'
+        ? categoryPool
+        : categoryPool.filter((item) => item.subcategory === adminSubcategorySelection)
 
     if (pool.length === 0) {
       setExploreError('No quiz questions available for the selected category.')
@@ -225,35 +239,21 @@ function QuizPage({
     onDeleteUserQuiz(quizId)
   }
 
-  const selectOption = (key) => {
-    if (!quizSessionState || quizSessionState.revealed || quizSessionState.completed) {
-      return
-    }
+  const submitAnswer = (session, selection) => {
+    const currentQuestion = session.questions[session.currentIndex]
+    const wasCorrect = selection === currentQuestion.correctAnswer
 
     onUpdateQuizSession({
-      ...quizSessionState,
-      pendingSelection: key,
-    })
-  }
-
-  const submitCurrentAnswer = () => {
-    if (!quizSessionState || !quizSessionState.pendingSelection || quizSessionState.revealed) {
-      return
-    }
-
-    const currentQuestion = quizSessionState.questions[quizSessionState.currentIndex]
-    const wasCorrect = quizSessionState.pendingSelection === currentQuestion.correctAnswer
-
-    onUpdateQuizSession({
-      ...quizSessionState,
-      score: quizSessionState.score + (wasCorrect ? 1 : 0),
+      ...session,
+      pendingSelection: selection,
+      score: session.score + (wasCorrect ? 1 : 0),
       revealed: true,
       wasCorrect,
       answers: [
-        ...quizSessionState.answers,
+        ...session.answers,
         {
           questionId: currentQuestion.id,
-          selected: quizSessionState.pendingSelection,
+          selected: selection,
           correctAnswer: currentQuestion.correctAnswer,
           wasCorrect,
         },
@@ -261,32 +261,50 @@ function QuizPage({
     })
   }
 
-  const goToNextQuestion = () => {
-    if (!quizSessionState) {
+  const selectOption = (key) => {
+    if (!quizSessionState || quizSessionState.revealed || quizSessionState.completed) {
       return
     }
 
-    const isLast = quizSessionState.currentIndex >= quizSessionState.questions.length - 1
-    if (isLast) {
-      onUpdateQuizSession({
-        ...quizSessionState,
-        completed: true,
-      })
+    submitAnswer(quizSessionState, key)
+  }
+
+  const closeQuizSession = () => {
+    if (!quizSessionState) {
       return
     }
 
     onUpdateQuizSession({
       ...quizSessionState,
-      currentIndex: quizSessionState.currentIndex + 1,
-      pendingSelection: '',
-      revealed: false,
-      wasCorrect: false,
+      completed: true,
     })
   }
 
-  const closeQuizSession = () => {
+  const dismissQuizResult = () => {
     onUpdateQuizSession(null)
   }
+
+  useEffect(() => {
+    if (!quizSessionState?.revealed || quizSessionState.completed) {
+      return undefined
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const isLast = quizSessionState.currentIndex >= quizSessionState.questions.length - 1
+      onUpdateQuizSession(
+        isLast
+          ? { ...quizSessionState, completed: true }
+          : {
+              ...quizSessionState,
+              currentIndex: quizSessionState.currentIndex + 1,
+              pendingSelection: '',
+              revealed: false,
+              wasCorrect: false,
+            },
+      )
+    }, 1200)
+    return () => window.clearTimeout(timeoutId)
+  }, [onUpdateQuizSession, quizSessionState])
 
   const tabList = [TAB_EXPLORE, TAB_CREATE, TAB_MY]
   const quizCategoryNames = quizCategories.map((item) => item.name)
@@ -347,23 +365,6 @@ function QuizPage({
               </article>
 
               <div className="quiz-session-actions">
-                {!quizSessionState.revealed ? (
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={submitCurrentAnswer}
-                    disabled={!quizSessionState.pendingSelection}
-                  >
-                    Submit Answer
-                  </button>
-                ) : (
-                  <button type="button" className="btn btn-primary" onClick={goToNextQuestion}>
-                    {quizSessionState.currentIndex + 1 === quizSessionState.questions.length
-                      ? 'Finish Quiz'
-                      : 'Next Question'}
-                  </button>
-                )}
-
                 <button type="button" className="btn btn-light" onClick={closeQuizSession}>
                   Exit Quiz
                 </button>
@@ -371,14 +372,24 @@ function QuizPage({
             </>
           ) : (
             <div className="quiz-result-card">
-              <h2>Quiz Completed</h2>
+              <h2>
+                {quizSessionState.answers.length === quizSessionState.questions.length
+                  ? 'Quiz Completed'
+                  : 'Quiz Report'}
+              </h2>
               <p>
                 Final Score: {quizSessionState.score}/{quizSessionState.questions.length}
               </p>
+              <div className="quiz-report-summary">
+                <p>Attempted: {quizSessionState.answers.length}</p>
+                <p>Remaining: {quizSessionState.questions.length - quizSessionState.answers.length}</p>
+                <p>Correct: {quizSessionState.score}</p>
+                <p>Incorrect: {quizSessionState.answers.length - quizSessionState.score}</p>
+              </div>
 
               <div className="quiz-review-list">
-                {quizSessionState.questions.map((question, index) => {
-                  const answer = quizSessionState.answers[index]
+                {quizSessionState.questions.map((question) => {
+                  const answer = quizSessionState.answers.find((item) => item.questionId === question.id)
                   return (
                     <article key={question.id} className="quiz-review-item">
                       <h3>{question.question}</h3>
@@ -391,7 +402,7 @@ function QuizPage({
               </div>
 
               <div className="quiz-session-actions">
-                <button type="button" className="btn btn-primary" onClick={closeQuizSession}>
+                <button type="button" className="btn btn-primary" onClick={dismissQuizResult}>
                   Close Result
                 </button>
               </div>
@@ -422,10 +433,27 @@ function QuizPage({
             <select
               id="quiz-category"
               value={adminCategorySelection}
-              onChange={(event) => setAdminCategorySelection(event.target.value)}
+              onChange={(event) => {
+                setAdminCategorySelection(event.target.value)
+                setAdminSubcategorySelection('mixed')
+              }}
             >
               <option value="mixed">Mixed Categories</option>
               {quizCategoryNames.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+
+            <label htmlFor="quiz-subcategory">Subcategory</label>
+            <select
+              id="quiz-subcategory"
+              value={adminSubcategorySelection}
+              onChange={(event) => setAdminSubcategorySelection(event.target.value)}
+            >
+              <option value="mixed">All Subcategories</option>
+              {availableSubcategories.map((name) => (
                 <option key={name} value={name}>
                   {name}
                 </option>

@@ -19,6 +19,7 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore'
+import { Analytics } from '@vercel/analytics/react'
 import Navbar from './components/Navbar'
 import AuthModal from './components/AuthModal'
 import AdminAuthModal from './components/AdminAuthModal'
@@ -1819,6 +1820,7 @@ function App() {
         onClose={() => setIsPreferencesOpen(false)}
         onSave={handleSavePreferences}
       />
+      <Analytics />
     </div>
   )
 }

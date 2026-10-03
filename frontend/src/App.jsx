@@ -160,6 +160,7 @@ function App() {
   const typingStatsStorageKey = 'learnsys_typing_stats'
   const courseProgressStorageKey = 'learnsys_course_progress'
   const courseRatingsStorageKey = 'learnsys_course_ratings'
+  const quizQuestionHistoryStorageKey = 'learnsys_quiz_question_history'
 
   const readStoredUser = () => {
     try {
@@ -296,6 +297,9 @@ function App() {
   const [courseRatingsByUsername, setCourseRatingsByUsername] = useState(() =>
     readStoredObject(courseRatingsStorageKey, {}),
   )
+  const [quizQuestionHistoryByUsername, setQuizQuestionHistoryByUsername] = useState(() =>
+    readStoredObject(quizQuestionHistoryStorageKey, {}),
+  )
   const restoredUserStateForRef = useRef(null)
   const [uploadedResources, setUploadedResources] = useState(() =>
     readStoredArray(uploadedResourcesStorageKey),
@@ -370,6 +374,13 @@ function App() {
   useEffect(() => {
     localStorage.setItem(courseRatingsStorageKey, JSON.stringify(courseRatingsByUsername))
   }, [courseRatingsByUsername])
+
+  useEffect(() => {
+    localStorage.setItem(
+      quizQuestionHistoryStorageKey,
+      JSON.stringify(quizQuestionHistoryByUsername),
+    )
+  }, [quizQuestionHistoryByUsername])
 
   useEffect(() => {
     let isCancelled = false
@@ -1736,6 +1747,24 @@ function App() {
                   adminQuizLoading={adminQuizLoading}
                   adminQuizError={adminQuizError}
                 userQuizzes={userQuizzes}
+                quizQuestionHistory={
+                  currentUser?.username
+                    ? quizQuestionHistoryByUsername[currentUser.username] ?? []
+                    : isAdmin
+                      ? quizQuestionHistoryByUsername.admin ?? []
+                      : []
+                }
+                onUpdateQuizQuestionHistory={(questionIds) => {
+                  const historyKey = currentUser?.username ?? (isAdmin ? 'admin' : null)
+                  if (!historyKey) {
+                    return
+                  }
+
+                  setQuizQuestionHistoryByUsername((prev) => ({
+                    ...prev,
+                    [historyKey]: [...new Set([...(prev[historyKey] ?? []), ...questionIds])],
+                  }))
+                }}
                 quizSessionState={quizSessionState}
                   onLoadAdminQuizzes={loadAdminQuizzes}
                 onRequireAuth={() => openAuth('login')}

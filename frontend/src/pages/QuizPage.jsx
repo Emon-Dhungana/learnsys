@@ -33,6 +33,8 @@ function QuizPage({
   adminQuizLoading,
   adminQuizError,
   userQuizzes,
+  quizQuestionHistory,
+  onUpdateQuizQuestionHistory,
   quizSessionState,
   onLoadAdminQuizzes,
   onRequireAuth,
@@ -45,6 +47,7 @@ function QuizPage({
   const [adminSubcategorySelection, setAdminSubcategorySelection] = useState('mixed')
   const [adminQuestionCount, setAdminQuestionCount] = useState(10)
   const [exploreError, setExploreError] = useState('')
+  const [pendingQuizStart, setPendingQuizStart] = useState(null)
 
   const [editingQuizId, setEditingQuizId] = useState(null)
   const [createError, setCreateError] = useState('')
@@ -108,10 +111,8 @@ function QuizPage({
       return
     }
 
-    const shuffled = shuffle(pool)
-    const selected = shuffled.slice(0, Math.min(adminQuestionCount, shuffled.length))
     setExploreError('')
-    startQuizSession('Admin Practice Quiz', 'admin', selected)
+    requestQuizStart('Admin Practice Quiz', 'admin', pool, null, adminQuestionCount)
   }
 
   const resetCreateForm = () => {
@@ -232,7 +233,52 @@ function QuizPage({
     }
 
     const shuffled = shuffle(quiz.questions)
-    startQuizSession(quiz.title, 'user', shuffled, quiz.id)
+    requestQuizStart(quiz.title, 'user', shuffled, quiz.id)
+  }
+
+  const requestQuizStart = (
+    title,
+    mode,
+    questions,
+    sourceQuizId = null,
+    questionLimit = null,
+  ) => {
+    const shownQuestionIds = new Set(quizQuestionHistory ?? [])
+    const newQuestions = questions.filter((question) => !shownQuestionIds.has(question.id))
+
+    setPendingQuizStart({
+      title,
+      mode,
+      questions,
+      newQuestions,
+      sourceQuizId,
+      questionLimit,
+      allQuestionsShown: newQuestions.length === 0,
+    })
+  }
+
+  const beginPendingQuiz = (repeatQuestions) => {
+    if (!pendingQuizStart) {
+      return
+    }
+
+    const sourceQuestions =
+      repeatQuestions || pendingQuizStart.allQuestionsShown
+        ? pendingQuizStart.questions
+        : pendingQuizStart.newQuestions
+    const questionsToUse = shuffle(sourceQuestions).slice(
+      0,
+      pendingQuizStart.questionLimit ?? sourceQuestions.length,
+    )
+
+    onUpdateQuizQuestionHistory?.(questionsToUse.map((question) => question.id))
+    startQuizSession(
+      pendingQuizStart.title,
+      pendingQuizStart.mode,
+      questionsToUse,
+      pendingQuizStart.sourceQuizId,
+    )
+    setPendingQuizStart(null)
   }
 
   const deleteQuiz = (quizId) => {
@@ -316,6 +362,53 @@ function QuizPage({
         <h1 id="quiz-heading">LearnSys Quiz System</h1>
         <p>Explore admin quizzes, build your own quizzes, and track your performance.</p>
       </header>
+
+      {pendingQuizStart ? (
+        <div className="auth-modal-overlay is-open" role="presentation">
+          <section
+            className="auth-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="quiz-repeat-heading"
+          >
+            <h3 id="quiz-repeat-heading">
+              {pendingQuizStart.allQuestionsShown
+                ? 'No new questions available'
+                : 'Repeat previously shown questions?'}
+            </h3>
+            <p>
+              {pendingQuizStart.allQuestionsShown
+                ? 'All questions in this quiz have already been shown or attempted. Continue with the existing questions?'
+                : 'Some questions have already been shown or attempted. Choose whether to include them again.'}
+            </p>
+            <div className="quiz-session-actions">
+              {!pendingQuizStart.allQuestionsShown ? (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => beginPendingQuiz(false)}
+                >
+                  Use New Questions Only
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => beginPendingQuiz(true)}
+              >
+                Continue with Existing Questions
+              </button>
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={() => setPendingQuizStart(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {quizSessionState ? (
         <section className="quiz-session" aria-label="Active quiz session">

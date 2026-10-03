@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import PdfViewer from '../components/PdfViewer'
 import { fetchPdfAsBlob, downloadPdf } from '../utils/pdfUtils'
+import { getRecommendationPredictions } from '../utils/decisionTreeRecommendation'
 
 function Courses({
   resources,
@@ -68,25 +69,45 @@ function Courses({
     return ratings.reduce((sum, value) => sum + value, 0) / ratings.length
   }
 
-  const getRecommendationScore = (resource) => {
-    const categoryBoost = hasPreferences
-      ? preferredResources.some((item) => item.id === resource.id)
-        ? 5
-        : 0
-      : 0
+  const averageRatings = useMemo(() => {
+    return resources.reduce((ratings, resource) => {
+      const resourceRatings = Object.values(courseRatingsByUsername ?? {}).flatMap((userRatings) =>
+        userRatings?.[resource.id] != null ? [Number(userRatings[resource.id])] : [],
+      )
 
-    const averageRating = getAverageRating(resource.id)
-    const ratingBoost = averageRating * 2
-    const userRatingBoost = getUserRatingForResource(resource.id) * 2
+      ratings[resource.id] =
+        resourceRatings.length > 0
+          ? resourceRatings.reduce((sum, value) => sum + value, 0) / resourceRatings.length
+          : 0
+      return ratings
+    }, {})
+  }, [resources, courseRatingsByUsername])
 
-    return categoryBoost + ratingBoost + userRatingBoost
-  }
+  const userRatings = useMemo(() => {
+    if (!currentUser?.username) {
+      return {}
+    }
+
+    return courseRatingsByUsername?.[currentUser.username] ?? {}
+  }, [courseRatingsByUsername, currentUser])
+
+  const recommendationPredictions = useMemo(
+    () =>
+      getRecommendationPredictions(resources, {
+        preferences: userPreferences,
+        averageRatings,
+        userRatings,
+        progress: resourceProgress,
+      }),
+    [resources, userPreferences, averageRatings, userRatings, resourceProgress],
+  )
 
   const rankedResources = useMemo(() => {
     return [...categoryFilteredResources].sort(
-      (a, b) => getRecommendationScore(b) - getRecommendationScore(a),
+      (a, b) =>
+        Number(recommendationPredictions[b.id]) - Number(recommendationPredictions[a.id]),
     )
-  }, [categoryFilteredResources, hasPreferences, preferredResources, courseRatingsByUsername, currentUser])
+  }, [categoryFilteredResources, recommendationPredictions])
 
   const visibleResources = hasPreferences && !showAll ? preferredResources : rankedResources
 
@@ -95,7 +116,7 @@ function Courses({
       return false
     }
 
-    return preferredResources.some((item) => item.id === resource.id) || getAverageRating(resource.id) >= 4
+    return Boolean(recommendationPredictions[resource.id])
   }
 
   const getProgressStatus = (resourceId) => {

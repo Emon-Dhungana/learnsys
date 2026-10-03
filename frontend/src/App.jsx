@@ -1787,6 +1787,11 @@ function App() {
                   courseProgress={
                     currentUser?.username ? courseProgressByUsername[currentUser.username] ?? {} : {}
                   }
+                  courseRatings={
+                    currentUser?.username
+                      ? courseRatingsByUsername[currentUser.username] ?? {}
+                      : {}
+                  }
                   onEditPreferences={openPreferences}
                 />
               </ProtectedRoute>

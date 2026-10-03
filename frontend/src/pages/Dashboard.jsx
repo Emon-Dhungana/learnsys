@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { getRecommendationPredictions } from '../utils/decisionTreeRecommendation'
 
 const getTypingRemark = (wpm) => {
   if (wpm <= 0) {
@@ -20,7 +21,16 @@ const getTypingRemark = (wpm) => {
   return 'Excellent speed. Maintain rhythm and reduce small errors.'
 }
 
-function Dashboard({ user, resources, typingStats, courseProgress, onEditPreferences, roleMode, onToggleRole }) {
+function Dashboard({
+  user,
+  resources,
+  typingStats,
+  courseProgress,
+  courseRatings,
+  onEditPreferences,
+  roleMode,
+  onToggleRole,
+}) {
   const memberSinceText = user?.createdAtMs
     ? `Member since: ${new Date(user.createdAtMs).toLocaleDateString()}`
     : 'Member since: Unavailable'
@@ -34,15 +44,15 @@ function Dashboard({ user, resources, typingStats, courseProgress, onEditPrefere
       return resources.slice(0, 4)
     }
 
-    const preferredCourseCategories = user.preferences.categories ?? []
-    const subcategories = user.preferences.subcategories ?? []
-
-    return resources.filter((resource) => {
-      const categoryMatch = preferredCourseCategories.includes(resource.category)
-      const subcategoryMatch = subcategories.includes(resource.subcategory)
-      return categoryMatch || subcategoryMatch
+    const predictions = getRecommendationPredictions(resources, {
+      preferences: user.preferences,
+      averageRatings: {},
+      userRatings: courseRatings,
+      progress: courseProgress,
     })
-  }, [hasPreferences, resources, user])
+
+    return resources.filter((resource) => predictions[resource.id])
+  }, [courseProgress, courseRatings, hasPreferences, resources, user])
 
   const englishHistory = useMemo(() => {
     return (typingStats?.history ?? []).filter((item) => (item.language ?? 'english') === 'english')

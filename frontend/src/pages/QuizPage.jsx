@@ -388,13 +388,20 @@ function QuizPage({
               </div>
 
               <div className="quiz-review-list">
-                {quizSessionState.questions.map((question) => {
-                  const answer = quizSessionState.answers.find((item) => item.questionId === question.id)
+                {quizSessionState.answers.map((answer) => {
+                  const question = quizSessionState.questions.find(
+                    (item) => item.id === answer.questionId,
+                  )
+
+                  if (!question) {
+                    return null
+                  }
+
                   return (
                     <article key={question.id} className="quiz-review-item">
                       <h3>{question.question}</h3>
                       <p>
-                        Your Answer: {answer?.selected ?? '-'} | Correct: {question.correctAnswer}
+                        Your Answer: {answer.selected} | Correct: {question.correctAnswer}
                       </p>
                     </article>
                   )

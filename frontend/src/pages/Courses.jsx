@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react'
 import PdfViewer from '../components/PdfViewer'
 import { fetchPdfAsBlob, downloadPdf } from '../utils/pdfUtils'
-import { getRecommendationPredictions } from '../utils/decisionTreeRecommendation'
+import {
+  getKnnRecommendationScores,
+  getRecommendationPredictions,
+} from '../utils/decisionTreeRecommendation'
 
 function Courses({
   resources,
@@ -10,6 +13,8 @@ function Courses({
   resourceProgress,
   courseRatingsByUsername,
   currentUser,
+  userPreferencesByUsername,
+  progressByUsername,
   onResourceView,
   onResourceDownload,
   onRateCourse,
@@ -102,21 +107,43 @@ function Courses({
     [resources, userPreferences, averageRatings, userRatings, resourceProgress],
   )
 
+  const knnScores = useMemo(
+    () =>
+      getKnnRecommendationScores(resources, {
+        currentUsername: currentUser?.username,
+        preferencesByUsername: userPreferencesByUsername,
+        ratingsByUsername: courseRatingsByUsername,
+        progressByUsername,
+      }),
+    [
+      currentUser?.username,
+      courseRatingsByUsername,
+      progressByUsername,
+      resources,
+      userPreferencesByUsername,
+    ],
+  )
+
   const rankedResources = useMemo(() => {
     return [...categoryFilteredResources].sort(
       (a, b) =>
-        Number(recommendationPredictions[b.id]) - Number(recommendationPredictions[a.id]),
+        (Number(recommendationPredictions[b.id]) - Number(recommendationPredictions[a.id])) * 0.5 +
+        (knnScores[b.id] ?? 0) - (knnScores[a.id] ?? 0),
     )
-  }, [categoryFilteredResources, recommendationPredictions])
+  }, [categoryFilteredResources, knnScores, recommendationPredictions])
 
   const visibleResources = hasPreferences && !showAll ? preferredResources : rankedResources
 
   const isRecommended = (resource) => {
-    if (!hasPreferences && getAverageRating(resource.id) < 4) {
+    if (
+      !hasPreferences &&
+      getAverageRating(resource.id) < 4 &&
+      (knnScores[resource.id] ?? 0) < 0.35
+    ) {
       return false
     }
 
-    return Boolean(recommendationPredictions[resource.id])
+    return Boolean(recommendationPredictions[resource.id]) || (knnScores[resource.id] ?? 0) >= 0.35
   }
 
   const getProgressStatus = (resourceId) => {

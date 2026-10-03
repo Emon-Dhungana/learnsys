@@ -1,5 +1,8 @@
 import { useMemo } from 'react'
-import { getRecommendationPredictions } from '../utils/decisionTreeRecommendation'
+import {
+  getKnnRecommendationScores,
+  getRecommendationPredictions,
+} from '../utils/decisionTreeRecommendation'
 
 const getTypingRemark = (wpm) => {
   if (wpm <= 0) {
@@ -27,6 +30,9 @@ function Dashboard({
   typingStats,
   courseProgress,
   courseRatings,
+  courseRatingsByUsername,
+  userPreferencesByUsername,
+  progressByUsername,
   onEditPreferences,
   roleMode,
   onToggleRole,
@@ -50,9 +56,26 @@ function Dashboard({
       userRatings: courseRatings,
       progress: courseProgress,
     })
+    const knnScores = getKnnRecommendationScores(resources, {
+      currentUsername: user?.username,
+      preferencesByUsername: userPreferencesByUsername,
+      ratingsByUsername: courseRatingsByUsername,
+      progressByUsername,
+    })
 
-    return resources.filter((resource) => predictions[resource.id])
-  }, [courseProgress, courseRatings, hasPreferences, resources, user])
+    return resources.filter(
+      (resource) => predictions[resource.id] || (knnScores[resource.id] ?? 0) >= 0.35,
+    )
+  }, [
+    courseProgress,
+    courseRatings,
+    courseRatingsByUsername,
+    hasPreferences,
+    progressByUsername,
+    resources,
+    user,
+    userPreferencesByUsername,
+  ])
 
   const englishHistory = useMemo(() => {
     return (typingStats?.history ?? []).filter((item) => (item.language ?? 'english') === 'english')

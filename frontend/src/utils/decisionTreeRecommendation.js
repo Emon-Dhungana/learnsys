@@ -162,3 +162,113 @@ export const getRecommendationPredictions = (resources, context = {}) => {
     return predictions
   }, {})
 }
+
+const getLearnerProfile = (username, context) => ({
+  preferences: context.preferencesByUsername?.[username] ?? { categories: [], subcategories: [] },
+  ratings: context.ratingsByUsername?.[username] ?? {},
+  progress: context.progressByUsername?.[username] ?? {},
+})
+
+const getLearnerVector = (profile, resources) => {
+  const vector = []
+  const categories = new Set()
+  const subcategories = new Set()
+
+  resources.forEach((resource) => {
+    categories.add(resource.category ?? 'Uncategorized')
+    subcategories.add(resource.subcategory ?? 'General')
+  })
+
+  categories.forEach((category) => {
+    vector.push(profile.preferences.categories?.includes(category) ? 1 : 0)
+  })
+  subcategories.forEach((subcategory) => {
+    vector.push(profile.preferences.subcategories?.includes(subcategory) ? 1 : 0)
+  })
+
+  resources.forEach((resource) => {
+    const rating = toFiniteNumber(profile.ratings?.[resource.id])
+    const progress = profile.progress?.[resource.id] ?? {}
+    vector.push(rating / 5)
+    vector.push(progress.viewed ? 0.35 : 0)
+    vector.push(progress.downloaded ? 0.5 : 0)
+  })
+
+  return vector
+}
+
+const cosineSimilarity = (left, right) => {
+  let dotProduct = 0
+  let leftMagnitude = 0
+  let rightMagnitude = 0
+
+  left.forEach((value, index) => {
+    dotProduct += value * right[index]
+    leftMagnitude += value * value
+    rightMagnitude += right[index] * right[index]
+  })
+
+  if (leftMagnitude === 0 || rightMagnitude === 0) {
+    return 0
+  }
+
+  return dotProduct / Math.sqrt(leftMagnitude * rightMagnitude)
+}
+
+const getLearnerSignal = (profile, resource) => {
+  const rating = toFiniteNumber(profile.ratings?.[resource.id])
+  const progress = profile.progress?.[resource.id] ?? {}
+  const categoryMatch = profile.preferences.categories?.includes(resource.category)
+  const subcategoryMatch = profile.preferences.subcategories?.includes(resource.subcategory)
+
+  return Math.min(
+    1,
+    rating / 5 +
+      (progress.viewed ? 0.35 : 0) +
+      (progress.downloaded ? 0.5 : 0) +
+      (categoryMatch ? 0.2 : 0) +
+      (subcategoryMatch ? 0.2 : 0),
+  )
+}
+
+export const getKnnRecommendationScores = (resources, context = {}) => {
+  const usernames = [
+    ...new Set([
+      ...Object.keys(context.preferencesByUsername ?? {}),
+      ...Object.keys(context.ratingsByUsername ?? {}),
+      ...Object.keys(context.progressByUsername ?? {}),
+    ]),
+  ].filter((username) => username !== context.currentUsername)
+
+  if (!context.currentUsername || usernames.length === 0 || resources.length === 0) {
+    return {}
+  }
+
+  const currentProfile = getLearnerProfile(context.currentUsername, context)
+  const currentVector = getLearnerVector(currentProfile, resources)
+  const neighbors = usernames
+    .map((username) => {
+      const profile = getLearnerProfile(username, context)
+      return {
+        profile,
+        similarity: cosineSimilarity(currentVector, getLearnerVector(profile, resources)),
+      }
+    })
+    .filter((neighbor) => neighbor.similarity > 0)
+    .sort((left, right) => right.similarity - left.similarity)
+    .slice(0, context.k ?? 3)
+
+  if (neighbors.length === 0) {
+    return {}
+  }
+
+  return resources.reduce((scores, resource) => {
+    const weightedSignal = neighbors.reduce(
+      (sum, neighbor) => sum + neighbor.similarity * getLearnerSignal(neighbor.profile, resource),
+      0,
+    )
+    const similarityTotal = neighbors.reduce((sum, neighbor) => sum + neighbor.similarity, 0)
+    scores[resource.id] = similarityTotal > 0 ? weightedSignal / similarityTotal : 0
+    return scores
+  }, {})
+}
